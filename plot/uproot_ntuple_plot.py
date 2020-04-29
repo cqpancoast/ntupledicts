@@ -8,8 +8,22 @@ import matplotlib.pyplot as plt
 
 
 """
-UPROOT PLOT
-TODO: what is uproot plot anyway?
+UPROOT NTUPLE PLOT
+
+An uproot-based child of the TrackTrigger package's L1TrackNtuplePlot
+that focuses on creating plots that would be difficult in that package.
+It is friendly with machine learning aims and goals, as our ML already
+takes place in Python.
+
+TODO: extend functionality to lists of event sets. Currently, only one event set is supported at a time.
+
+TODO: data definitions (how is trackset_properties different from ntuple_properties? Standardize language.
+	Also, are we going with lower and upper bound cuts or should we be a good boy and generalize to
+	function objects?)
+
+TODO: Clean up function structure so that tests can be written so that we can figure out why this is giving
+the wrong efficiency.
+
 """
 
 def main(argv):
@@ -20,8 +34,8 @@ def main(argv):
 	properties_by_track_type = {"trk": ["pt", "eta", "nstub", "chi2rphi", "chi2rz", "genuine", "fake"],
                 "matchtrk": ["pt", "eta", "nstub", "chi2rphi", "chi2rz"],
                 "tp": ["pt", "eta", "nstub"]}
-	cut_dicts={"tp": {"eta": [-2.4, 2.4], "pt": [4, 13000], "nstub": [4, 8]},
-		"trk": {"eta": [-2.4, 2.4], "pt": [4, 13000], "nstub": [4, 8]}}
+	cut_dicts={"tp": {"eta": [-2.4, 2.4], "pt": [2, 13000], "nstub": [4, 8]},
+		"trk": {"eta": [-2.4, 2.4], "pt": [2, 13000], "nstub": [4, 8]}}
 
 	if len(argv) == 1:
 		plot(events, properties_by_track_type, cut_dicts)
@@ -31,7 +45,9 @@ def main(argv):
 
 
 def plot(events, properties_by_track_type, cut_dicts):
-	"""Get data, then call functions to make graphs from that data.
+	"""Get data, then call functions to make graphs from that data. This is
+	the alterable part of this file where you put together any of the functions
+	below to create what you want.
 
 	Args:
 		events:  an uproot event set
@@ -45,6 +61,8 @@ def plot(events, properties_by_track_type, cut_dicts):
         ntuple_properties = dict(map(lambda track_type, properties: (track_type, ntuple_to_dict(events, track_type, properties)), properties_by_track_type.keys(), properties_by_track_type.values()))
 	ntuple_properties = cut_ntuple(ntuple_properties, cut_dicts)
 
+	print(eff_from_ntuple(ntuple_properties))
+
 	# Call appropriate plotting function(s)
 
         #print(eff_from_matchtrks_and_tps(ntuple_properties["matchtrk"]["pt"], ntuple_properties["tp"]["pt"], lambda mt_pt: mt_pt > 8, lambda tp_pt: tp_pt > 8))
@@ -57,6 +75,7 @@ def plot(events, properties_by_track_type, cut_dicts):
 	#plot_roc_curve(ntuple_properties, "chi2rphi", [[0, 9999], [0, 500], [0, 100], [0, 70], [0, 50], [0, 40], [0, 30], [0, 20], [0, 10], [0, 5]], group_name="pt8", ax=ax, color='orange')
 	#plot_roc_curve(ntuple_properties, "chi2rz", [[0, 9999], [0, 500], [0, 50], [0, 20], [0, 11], [0, 10], [0, 9], [0, 8], [0, 7], [0, 6], [0, 5]], group_name="pt8")#, ax=axz, color='orange')
 
+	"""
 	genuine_properties = cut_trackset(ntuple_properties["trk"], {"genuine": 0})
 	not_genuine_properties = cut_trackset(ntuple_properties["trk"], {"genuine": 1})
 	fake_properties = cut_trackset(ntuple_properties["trk"], {"fake": 0})
@@ -77,6 +96,7 @@ def plot(events, properties_by_track_type, cut_dicts):
 		"fake": fake_properties["chi2rz"]}, "chi2rz", "trk_fake_dist")
 	overlay({"genuine": genuine_properties["chi2rphi"], "fake": not_genuine_properties["chi2rphi"]}, "chi2rphi", "trk_genuine_dist")
 	overlay({"genuine": genuine_properties["chi2rz"], "fake": not_genuine_properties["chi2rz"]}, "chi2rz", "trk_genuine_dist")
+	"""
 
 	print("Process complete. Exiting program.")
 
@@ -104,8 +124,8 @@ def ntuple_to_dict(events, track_type, properties):
 
 
 def cut_ntuple(ntuple_properties,
-	cut_dicts={"tp": {"eta": [-2.4, 2.4], "pt": [4, 13000], "nstub": [4, 8]},
-		"trk": {"eta": [-2.4, 2.4], "pt": [4, 13000], "nstub": [4, 8]}}):
+	cut_dicts={"tp": {"eta": [-2.4, 2.4], "pt": [2, 13000], "nstub": [4, 8]},
+		"trk": {"eta": [-2.4, 2.4], "pt": [2, 13000], "nstub": [4, 8]}}):
 	"""Takes in this file's representation of an ntuple (a dict from track types
 	to dicts from properties to value lists) and cuts each trackset. Takes into
 	account that matchtrks and tps must be cut together, and that trks and matchtps
@@ -133,7 +153,7 @@ def cut_ntuple(ntuple_properties,
 
 
 def cut_trackset(tracks_properties, cut_dict={},
-		basic_cut_dict={"eta": [-2.4, 2.4], "pt": [4, 13000], "nstub": [4, 8]}):
+		basic_cut_dict={"eta": [-2.4, 2.4], "pt": [2, 13000], "nstub": [4, 8]}):
 	"""Cuts a trackset (trk_XYZ, tp_XYZ, etc.) given the cut dicts."""
 
 	basic_cut_dict.update(cut_dict)  # cut dict must override basic_cut_dict elements
@@ -192,7 +212,19 @@ def cut_trackset_by_indices(tracks_properties, indices_to_cut):
 	lists of the dictionary. Assumes that all lists in tracks_properties
 	are the same size. This list of indices will frequently be generated
 	using get_indices_meeting_condition. The list of indices does not
-	have to be sorted by size."""
+	have to be sorted by size.
+
+	Args:
+		tracks_properties:  a dictionary from track property names to
+			lists of track property values.
+		indices_to_cut:  a collection of indices to cut. Repeats are
+			tolerated, but out-of-range indices will result in an
+			exception.
+
+	Returns:
+		A trackset of the same form as the input, but with the indices
+		on its value lists removed.
+	"""
 
 	# Copy, then delete all tracks (going backwards so as not to affect indices)
 	cut_tracks_properties = deepcopy(tracks_properties)
@@ -203,28 +235,57 @@ def cut_trackset_by_indices(tracks_properties, indices_to_cut):
 	return cut_tracks_properties
 
 
-def get_proportion_meeting_condition(tracks_property, property_condition):
+def get_proportion_meeting_condition(tracks_property, property_condition, norm=True):
 	"""Find the proportion of tracks whose given property meets a condition.
-	If the number of tracks is zero, returns zero."""
+	If the number of tracks is zero, returns zero. Can also return the number
+	of tracks meeting the condition.
+
+	Args:
+		tracks_property:  a list of values of a track property, such as
+			trk_pt or tp_chi2rphi
+		property_condition:  a property that these value can satisfy. For
+			exampe, "lambda trk_eta: trk_eta <= 2.4".
+		norm:  if True, divides the number of tracks meeting the condition
+			by the total number of tracks. This is the default option.
+
+	Returns:
+		Either the number or proportion of tracks meeting the condition,
+		depending on the value of norm.
+	"""
 
 	if len(tracks_property) == 0:
 		print("Cannot calculate proportion meeting condition in zero-length quantity. Returning zero.")
 		return 0
-	else:
-		return float(sum(map(property_condition, tracks_property))) / len(tracks_property)
+		
+	num_tracks_meeting_cond = sum(map(property_condition, tracks_property))
+	return float(num_tracks_meeting_cond) / len(tracks_property) if norm else num_tracks_meeting_cond
 
 
-def eff_from_matchtrks_and_tps(matchtrks_prop, tps_prop,
-		matchtrk_cond=lambda trk_prop_val: trk_prop_val != -999,
-		tp_cond=lambda tp_prop_val: True):
-        """Finds the efficiency from any given matchtrk property and the number
-	of tracking particles. Subtracts out filler values from total matchtrks."""
+def eff_from_ntuple(ntuple_properties, tp_cond_dict={}):
+	"""Finds the efficieny of an ntuple. Restrictions can be made on the 
+	tracking particles by performing a cut on the ntuple. Note that this
+	procedure requires that the ntuple contain both "tp" and "matchtrk"
+	track types. It also requires that "matchtrk" contains the "pt"
+	property, but this is bad coding practice and will be fixed somehow.
 
-	print(len(filter(matchtrk_cond, matchtrks_prop)))
-	print(len(filter(tp_cond, tps_prop)))
+	Args:
+		ntuple_properties:  the ntuple to find the efficiency of
+		tp_cond_dict:  a dictionary from tp properties ("pt", "eta", etc.)
+			to conditions (lambda pt: pt < 2, etc.)
 
-	return float(len(filter(matchtrk_cond, matchtrks_prop))) / len(filter(tp_cond, tps_prop))
- 
+	Returns:
+		The efficiency of the tracking algorithm run on the given ntuple
+	""" #TODO these conditions are "cut dictionaries" for now, but this will be fixed. 
+
+	# Cutting on tracking particles also cuts the corresponding matchtracks
+	cut_ntuple_properties = cut_ntuple(ntuple_properties, {"tp": tp_cond_dict})
+	matchtrks_pt = cut_ntuple_properties["matchtrk"]["pt"]
+
+	# Now, count how many matchtrks have a non-filler value for pt
+	pt_not_filler_cond = lambda pt: pt > 0
+	print(float(sum(map(pt_not_filler_cond, matchtrks_pt))), len(matchtrks_pt))
+	return float(sum(map(pt_not_filler_cond, matchtrks_pt))) / len(matchtrks_pt)
+
 
 def plot_roc_curve(ntuple_properties_in, cut_property, cuts, cuts_increasing=True, group_name="",
 		ax=plt.figure().add_subplot(111), save_plot=True, color='blue'):
@@ -247,7 +308,7 @@ def plot_roc_curve(ntuple_properties_in, cut_property, cuts, cuts_increasing=Tru
 		The axes object used to plot this graph, for use in overlaying
 	"""
 
-	# We don't want to alter ntuple_properties, do we?
+	# We don't want to alter our original ntuple_properties
 	ntuple_properties = deepcopy(ntuple_properties_in)
 
 	# Build up cuts plot info, which is what will be plotted
@@ -282,7 +343,10 @@ def plot_roc_curve(ntuple_properties_in, cut_property, cuts, cuts_increasing=Tru
 def proportion_foreach_bin(trks_property, trks_property_wrt, property_condition, num_bins=30):
         """wrt meaning "with respect to" - bin tracks by property, and then see how another
 	property of those tracks meets a certain condition. For example, fake rate by eta,
-	or efficiency by pT."""  # TODO support efficiency
+	or efficiency by pT.
+
+	Bear in mind that this function only has stdev error bars. One creating a graph like
+	this should generally use ROOT."""
 
 	bins = np.linspace(min(trks_property_wrt), max(trks_property_wrt), num_bins)
 
@@ -299,7 +363,7 @@ def proportion_foreach_bin(trks_property, trks_property_wrt, property_condition,
 	bins_trks_proportions_stdev = []
 	for bin_trks_property in bins_trks_property:
 		bins_trks_proportions.append(get_proportion_meeting_condition(bin_trks_property, property_condition))
-		bins_trks_proportions_stdev.append(1/sqrt(len(bin_trks_property)) if len(bin_trks_property) > 0 else 0)  #TODO generalize: but also, is this alright?
+		bins_trks_proportions_stdev.append(1/sqrt(len(bin_trks_property)) if len(bin_trks_property) > 0 else 0)
 
 	plt.errorbar(x=[ (bin_low_edge + bin_high_edge) / 2 for bin_low_edge, bin_high_edge in zip(bins[:-1], bins[1:]) ], 
 			y=bins_trks_proportions, yerr=bins_trks_proportions_stdev,
@@ -344,6 +408,7 @@ def hist2D_properties(property1, property2, property1name="", property2name="", 
 
 
 # Global variables
+# (It isn't good practice, but this is certainly better than passing them around like dead weight.)
 input_file = "EventSets/TTbar_PU200_D49.root"
 input_file_short = "ttbar_pu200"
 output_dir = "TrkPlots/UprootPlots/"
