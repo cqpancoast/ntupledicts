@@ -1,41 +1,88 @@
-import uproot
+from uproot import open as uproot_open
 from sys import argv
-import numpy as np
+from numpy import linspace
 from copy import deepcopy
 from math import sqrt
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+#import unittest
 
 
 """
 UPROOT NTUPLE PLOT
 
-An uproot-based child of the TrackTrigger package's L1TrackNtuplePlot
-that focuses on creating plots that would be difficult in that package.
-It is friendly with machine learning aims and goals, as our ML already
-takes place in Python.
+An uproot-based child of the TrackFindingTracklet package's L1TrackNtuplePlot.
+It is friendly with machine learning aims and goals, as our ML already takes
+place in Python.
 
-TODO: extend functionality to lists of event sets. Currently, only one event set is supported at a time.
+There are three parts to this code:
+	- Getting Data.
+		One or more ntuples is read in. If more than one ntuple is
+		read in, they are all concatenated together. More on the data
+		structures used below.
+	- Applying Cuts.
+		Place arbitrary cuts on the event collection on any property of
+		any track type.
+	- Plotting.
+		The matplotlib library is (for some) easier to work with than
+		the ROOT plotting library. However, matplotlib does not know you
+		are a pysicist! This is not intended as a replacement for ROOT,
+		just an alternative.
 
-TODO: data definitions (how is trackset_properties different from ntuple_properties? Standardize language.
-	Also, are we going with lower and upper bound cuts or should we be a good boy and generalize to
-	function objects?)
 
-TODO: Clean up function structure so that tests can be written so that we can figure out why this is giving
-the wrong efficiency.
+Data Definitions and Scheme
+
+All event data is stored in an object called a track type dictionary. This is a
+dictionary from track types ("trk", "tp", "matchtrk", "matchtp") to dicts
+from track properties ("eta", "chi2", "nmatch") to lists of properties. (These
+smaller dicts within the track type dictionaries are called "track property dicts".)
+For example, a simple track type dictionary might look like this:
+
+	{"trk": {"pt": [1, 2, 3], "eta": [0, 2.2, 1.1]}, "tp": {"nmatch": ...}}
+
+The values here are the track property dictionaries.
+
+In the main method, you can specify which properties you want to access from
+the ntuple to have in your track type dictionary. This is nice, because you don't
+have to deal with hauling around any more data than you have to!
+
+
+Applying Cuts
+
+To perform a cut on a track type dictionary... TODO docs!!!
+
+
+Plotting
+
+The plotting functions contained here are, so far, a big mess of things that
+were useful to me at one point. If I ship this out to people, I want to have a
+clearer organization scheme with these things.
+
+Starting with something like, all functions return axes objects?
+
+
+TODO:
+- make dealing with multiple event sets possible
+- standardize language in code to match data def scheme in documentation
+- after that, complete documentation
+- change cuts from crappy 2-arrays to configurable function objects
+- reduce import overhead; this is ridiculous
+- reduce every line down to 80 characters to comply with Python standards
+- unit tests? Is that the physicist way? (Do I have the time or patience?)
+- "all plotting functions return axes objects"
 
 """
 
 def main(argv):
-	"""If first argument is the string 'length', print length of input file."""
+	"""If first argument is the string 'length', print number of events in input file."""
 
-	# Make ntuple properties dict
-	events = uproot.open(input_file)["L1TrackNtuple"]["eventTree"]
+	# Open ntuple, specify desired properties and cuts to be applied
+	events = uproot_open(input_file)["L1TrackNtuple"]["eventTree"]
 	properties_by_track_type = {"trk": ["pt", "eta", "nstub", "chi2rphi", "chi2rz", "genuine", "fake"],
                 "matchtrk": ["pt", "eta", "nstub", "chi2rphi", "chi2rz"],
-                "tp": ["pt", "eta", "nstub"]}
-	cut_dicts={"tp": {"eta": [-2.4, 2.4], "pt": [2, 13000], "nstub": [4, 8]},
-		"trk": {"eta": [-2.4, 2.4], "pt": [2, 13000], "nstub": [4, 8]}}
+                "tp": ["pt", "eta", "nstub", "dxy", "d0", "eventid", "nmatch"]}
+	cut_dicts = {"tp": {"eta": [-2.4, 2.4], "pt": [2, 100], "nstub": [4, 999],
+		"dxy": [-1.0, 1.0], "d0": [-1.0, 1.0], "eventid": 0}}
 
 	if len(argv) == 1:
 		plot(events, properties_by_track_type, cut_dicts)
@@ -58,35 +105,27 @@ def plot(events, properties_by_track_type, cut_dicts):
 			e.g., {"tp": {"pt": [2, 100]}}
 	"""
 
-        ntuple_properties = dict(map(lambda track_type, properties: (track_type, ntuple_to_dict(events, track_type, properties)), properties_by_track_type.keys(), properties_by_track_type.values()))
+	# Create ntuple properties dict from event set
+        ntuple_properties = dict(map(lambda track_type, properties: \
+		(track_type, ntuple_to_dict(events, track_type, properties)), \
+		properties_by_track_type.keys(), properties_by_track_type.values()))
 	ntuple_properties = cut_ntuple(ntuple_properties, cut_dicts)
-
-	print(eff_from_ntuple(ntuple_properties))
 
 	# Call appropriate plotting function(s)
 
-        #print(eff_from_matchtrks_and_tps(ntuple_properties["matchtrk"]["pt"], ntuple_properties["tp"]["pt"], lambda mt_pt: mt_pt > 8, lambda tp_pt: tp_pt > 8))
-
-	#proportion_foreach_bin(ntuple_properties["trk"]["genuine"], ntuple_properties["trk"]["eta"], lambda trk_genuine: trk_genuine == 0)
-
-	#ax = plot_roc_curve(ntuple_properties, "chi2rphi", [[0, 9999], [0, 500], [0, 100], [0, 70], [0, 50], [0, 40], [0, 30], [0, 20], [0, 10], [0, 5]], group_name="allpt", save_plot=True)
-	#axz = plot_roc_curve(ntuple_properties, "chi2rz", [[0, 9999], [0, 500], [0, 50], [0, 20], [0, 11], [0, 10], [0, 9], [0, 8], [0, 7], [0, 6], [0, 5]], group_name="allpt", save_plot=True)
-	#ntuple_properties = cut_ntuple(ntuple_properties, {"trk": {"pt": [8, 13000]}, "tp": {"pt": [8, 13000]}})
-	#plot_roc_curve(ntuple_properties, "chi2rphi", [[0, 9999], [0, 500], [0, 100], [0, 70], [0, 50], [0, 40], [0, 30], [0, 20], [0, 10], [0, 5]], group_name="pt8", ax=ax, color='orange')
-	#plot_roc_curve(ntuple_properties, "chi2rz", [[0, 9999], [0, 500], [0, 50], [0, 20], [0, 11], [0, 10], [0, 9], [0, 8], [0, 7], [0, 6], [0, 5]], group_name="pt8")#, ax=axz, color='orange')
-
 	"""
+	ax = plot_roc_curve(ntuple_properties, "chi2rphi", [[0, 9999], [0, 500], [0, 100], [0, 70], [0, 50], [0, 40], [0, 30], [0, 20], [0, 10], [0, 5]], group_name="allpt", save_plot=True)
+	axz = plot_roc_curve(ntuple_properties, "chi2rz", [[0, 9999], [0, 500], [0, 50], [0, 20], [0, 11], [0, 10], [0, 9], [0, 8], [0, 7], [0, 6], [0, 5]], group_name="allpt", save_plot=True)
+	ntuple_properties = cut_ntuple(ntuple_properties, {"trk": {"pt": [8, 13000]}, "tp": {"pt": [8, 13000]}})
+	plot_roc_curve(ntuple_properties, "chi2rphi", [[0, 9999], [0, 500], [0, 100], [0, 70], [0, 50], [0, 40], [0, 30], [0, 20], [0, 10], [0, 5]], group_name="pt8", ax=ax, color='orange')
+	plot_roc_curve(ntuple_properties, "chi2rz", [[0, 9999], [0, 500], [0, 50], [0, 20], [0, 11], [0, 10], [0, 9], [0, 8], [0, 7], [0, 6], [0, 5]], group_name="pt8")#, ax=axz, color='orange')
+	"""
+
 	genuine_properties = cut_trackset(ntuple_properties["trk"], {"genuine": 0})
 	not_genuine_properties = cut_trackset(ntuple_properties["trk"], {"genuine": 1})
 	fake_properties = cut_trackset(ntuple_properties["trk"], {"fake": 0})
 	not_fake_properties_primary = cut_trackset(ntuple_properties["trk"], {"fake": 1})
 	not_fake_properties_secondary = cut_trackset(ntuple_properties["trk"], {"fake": 2})
-
-	print(genuine_properties)
-	print(not_genuine_properties)
-	print(fake_properties)
-	print(not_fake_properties_primary)
-	print(not_fake_properties_secondary)
 
 	overlay({"primary-vertex": not_fake_properties_primary["chi2rphi"],
 		"secondary-vertex": not_fake_properties_secondary["chi2rphi"],
@@ -96,7 +135,6 @@ def plot(events, properties_by_track_type, cut_dicts):
 		"fake": fake_properties["chi2rz"]}, "chi2rz", "trk_fake_dist")
 	overlay({"genuine": genuine_properties["chi2rphi"], "fake": not_genuine_properties["chi2rphi"]}, "chi2rphi", "trk_genuine_dist")
 	overlay({"genuine": genuine_properties["chi2rz"], "fake": not_genuine_properties["chi2rz"]}, "chi2rz", "trk_genuine_dist")
-	"""
 
 	print("Process complete. Exiting program.")
 
@@ -123,9 +161,13 @@ def ntuple_to_dict(events, track_type, properties):
 	return tracks_properties
 
 
+
+# APPLYING CUTS
+
+
 def cut_ntuple(ntuple_properties,
-	cut_dicts={"tp": {"eta": [-2.4, 2.4], "pt": [2, 13000], "nstub": [4, 8]},
-		"trk": {"eta": [-2.4, 2.4], "pt": [2, 13000], "nstub": [4, 8]}}):
+	cut_dicts={"tp": {"eta": [-2.4, 2.4], "pt": [2, 13000], "nstub": [4, 999]},
+		"trk": {"eta": [-2.4, 2.4], "pt": [2, 13000], "nstub": [4, 999]}}):
 	"""Takes in this file's representation of an ntuple (a dict from track types
 	to dicts from properties to value lists) and cuts each trackset. Takes into
 	account that matchtrks and tps must be cut together, and that trks and matchtps
@@ -152,14 +194,11 @@ def cut_ntuple(ntuple_properties,
 	return cut_ntuple_properties
 
 
-def cut_trackset(tracks_properties, cut_dict={},
-		basic_cut_dict={"eta": [-2.4, 2.4], "pt": [2, 13000], "nstub": [4, 8]}):
+def cut_trackset(tracks_properties, cut_dict={"eta": [-2.4, 2.4], "pt": [2, 13000], "nstub": [4, 999]}):
 	"""Cuts a trackset (trk_XYZ, tp_XYZ, etc.) given the cut dicts."""
 
-	basic_cut_dict.update(cut_dict)  # cut dict must override basic_cut_dict elements
-
 	return cut_trackset_by_indices(tracks_properties,
-		get_indices_meeting_conditions(tracks_properties, basic_cut_dict))
+		get_indices_meeting_conditions(tracks_properties, cut_dict))
 
 
 def get_indices_meeting_conditions(tracks_properties, cond_dict={}): 
@@ -235,6 +274,10 @@ def cut_trackset_by_indices(tracks_properties, indices_to_cut):
 	return cut_tracks_properties
 
 
+
+# PLOTTING
+
+
 def get_proportion_meeting_condition(tracks_property, property_condition, norm=True):
 	"""Find the proportion of tracks whose given property meets a condition.
 	If the number of tracks is zero, returns zero. Can also return the number
@@ -263,10 +306,8 @@ def get_proportion_meeting_condition(tracks_property, property_condition, norm=T
 
 def eff_from_ntuple(ntuple_properties, tp_cond_dict={}):
 	"""Finds the efficieny of an ntuple. Restrictions can be made on the 
-	tracking particles by performing a cut on the ntuple. Note that this
-	procedure requires that the ntuple contain both "tp" and "matchtrk"
-	track types. It also requires that "matchtrk" contains the "pt"
-	property, but this is bad coding practice and will be fixed somehow.
+	tracking particles by performing a cut on the ntuple. Note that the
+	ntuple must contain pt.
 
 	Args:
 		ntuple_properties:  the ntuple to find the efficiency of
@@ -275,16 +316,14 @@ def eff_from_ntuple(ntuple_properties, tp_cond_dict={}):
 
 	Returns:
 		The efficiency of the tracking algorithm run on the given ntuple
-	""" #TODO these conditions are "cut dictionaries" for now, but this will be fixed. 
+	"""
 
 	# Cutting on tracking particles also cuts the corresponding matchtracks
 	cut_ntuple_properties = cut_ntuple(ntuple_properties, {"tp": tp_cond_dict})
-	matchtrks_pt = cut_ntuple_properties["matchtrk"]["pt"]
+	tps_nmatch = cut_ntuple_properties["tp"]["nmatch"]
 
-	# Now, count how many matchtrks have a non-filler value for pt
-	pt_not_filler_cond = lambda pt: pt > 0
-	print(float(sum(map(pt_not_filler_cond, matchtrks_pt))), len(matchtrks_pt))
-	return float(sum(map(pt_not_filler_cond, matchtrks_pt))) / len(matchtrks_pt)
+	# Now, count how many tp's have an nmatch value greater than zero
+	return float(sum(map(lambda nmatch: nmatch > 0, tps_nmatch))) / len(tps_nmatch)
 
 
 def plot_roc_curve(ntuple_properties_in, cut_property, cuts, cuts_increasing=True, group_name="",
@@ -346,7 +385,8 @@ def proportion_foreach_bin(trks_property, trks_property_wrt, property_condition,
 	or efficiency by pT.
 
 	Bear in mind that this function only has stdev error bars. One creating a graph like
-	this should generally use ROOT."""
+	this should generally use ROOT.
+	"""
 
 	bins = np.linspace(min(trks_property_wrt), max(trks_property_wrt), num_bins)
 
@@ -407,9 +447,22 @@ def hist2D_properties(property1, property2, property1name="", property2name="", 
 	plt.clf()
 
 
+def run_tests():
+	"""Build up simple examples; check to make sure that these functions do
+	what they say they do. Currently only tests cut_ntuple."""
+
+	# EXAMPLES (all should have length of 7)
+	num_tp = 7
+	tp_eta = range(-3, 4)
+	tp_pt = range(1, 8)
+	tp_nstub = [6 for _ in range(num_tp)]
+
+	tps_properties = {"pt": tp_pt, "eta": tp_eta, "nstub": tp_nstub}
+
+
 # Global variables
 # (It isn't good practice, but this is certainly better than passing them around like dead weight.)
-input_file = "EventSets/TTbar_PU200_D49.root"
+input_file = "EventSets/TTbar_PU200_D49_20.root"
 input_file_short = "ttbar_pu200"
 output_dir = "TrkPlots/UprootPlots/"
 
