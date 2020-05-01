@@ -49,33 +49,35 @@ To perform a cut on a track type dictionary... TODO docs!!!
 
 Plotting
 
-The plotting functions contained here are, so far, a big mess of things that
-were useful to me at one point. If I ship this out to people, I want to have a
-clearer organization scheme with these things.
+All plotting functions follow certain rules:
+    - All return an axes object
+    - None clear or save the figure
+    - Some set labels (x-axis, y-axis, title) but some do not
 
-Starting with something like, all functions return axes objects?
 
-
-TODO:
+TODO (in mixed order of dependence/importance):
+- standardize language in code to match data def scheme in documentation
+    - after that, complete documentation
+- make it play nice with ML stuff
+    - Include Claire's plotting functions (or altered versions of them) in
+        plot file
 - make dealing with multiple event sets possible
     - in addition, have operations for event set concatenation
-- standardize language in code to match data def scheme in documentation
-- after that, complete documentation
 - change cuts from crappy 2-arrays to configurable function objects
 - reduce import overhead; this is ridiculous
+    - maybe it's only ridiculous for me though
 - reduce every line down to 80 characters to comply with Python standards
 - unit tests? Is that the physicist way? (Do I have the time or patience?)
-- "all plotting functions return axes objects"
-- make it play nice with ML stuff
-- split this into two separate files and make them play nicely together
 
 """
 
 
 # Global variables
 # (It isn't good practice, but this is certainly better than passing them around like dead weight.)
-input_file = "data/TTbar_PU200_D49_20.root"
-input_file_short = "ttbar_pu200"
+
+# Input/Output global variable dict
+input_file = "data/eventsets/TTbar_PU200_D49_20.root"
+input_file_short = "ttbar_pu200_20"
 output_dir = "savedplots/"
 
 
@@ -90,32 +92,28 @@ def main(argv):
     cut_dicts = {"tp": {"eta": [-2.4, 2.4], "pt": [2, 100], "nstub": [4, 999],
                         "dxy": [-1.0, 1.0], "d0": [-1.0, 1.0], "eventid": 0}}
 
-    if len(argv) == 1:
-        plot(events, properties_by_track_type, cut_dicts)
-    elif len(argv) == 2 and argv[1] == "length":
-        track_type = properties_by_track_type.keys()[0]
-        print(
-            len(events[track_type + "_" + properties_by_track_type[track_type][0]]))
-
-
-def plot(events, properties_by_track_type, cut_dicts):
-    """Call functions from the file where all the plots are!
-
-    Args:
-            events:  an uproot event set
-            properties_by_track_type:  properties by track type.
-                    e.g., {"trk": ["pt", "eta", "nstub"]}
-            cut_dicts:  a dict from track types
-                    to dicts from properties to cut ranges.
-                    e.g., {"tp": {"pt": [2, 100]}}
-    """
-
     # Create ntuple properties dict from event set
     ntuple_properties = dict(map(lambda track_type, properties:
                                  (track_type, ntuple_to_dict(
                                      events, track_type, properties)),
                                  properties_by_track_type.keys(), properties_by_track_type.values()))
     ntuple_properties = cut_ntuple(ntuple_properties, cut_dicts)
+
+    if len(argv) == 1:
+        plot(ntuple_properties)
+    elif len(argv) == 2 and argv[1] == "length":
+        track_type = next(iter(properties_by_track_type.keys()))
+        print(
+            len(events[track_type + "_" + properties_by_track_type[track_type][0]]))
+
+
+def plot(ntuple_properties):
+    """Call functions from the file where all the plots are!
+
+    Args:
+        ntuple_properties:  you know, the thing
+    """
+
 
     # Call appropriate plotting function(s)
 
