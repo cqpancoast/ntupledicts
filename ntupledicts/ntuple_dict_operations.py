@@ -1,28 +1,109 @@
 from ntupledicts import *
 from copy import deepcopy
+from functools import reduce
 
 
-def ntuple_to_dict(events, track_type, properties):
+def ntuples_to_ntuple_dict(event_sets, properties_by_track_type):
+    """Takes in a collection of uproot ntuples and a dictionary from
+    track types to desired properties to be included, returns an ntuple
+    dictionary formed by selecting properties from the ntuples and then
+    concatenating them all together.
+
+    Args:
+        event_sets:  a collection of uproot ntuples
+        properties_by_track_type:  a dictionary from track types (trk,
+            matchtrk, etc.) to properties to be selected (eta, pt, chi2)
+
+    Returns:
+        An ntuple dictionary
+    """
+
+    return add_ntuple_dicts(map(lambda event_set: 
+        ntuple_to_ntuple_dict(event_set, properties_by_track_type), 
+        event_sets))
+
+
+def ntuple_to_ntuple_dict(event_set, properties_by_track_type):
+    """Turns an uproot ntuple into an ntuple dictionary.
+
+    Args:
+        event_set:  an uproot ntuple
+        properties_by_track_type:  a dictionary from track types (trk,
+             matchtrk, etc.) to properties to be selected (eta, pt, chi2)
+
+    Returns:
+        An ntuple dictionary
+    """
+
+    return dict(map(lambda track_type, properties: 
+        (track_type, ntuple_to_tracks_prop_dict(event_set, track_type, properties)),
+        properties_by_track_type.keys(), properties_by_track_type.values()))
+
+
+def ntuple_to_tracks_prop_dict(event_set, track_type, properties):
     """Takes in an uproot ntuple, the data type, and properties to be extracted;
     returns a dictionary from a property name to flattened array of values.
     Note that due to this flattening, all information about which tracks are
     from which event is lost.
 
     Args:
-            events:  an uproot event set
+            event_set:  an uproot event set
             track_type:  trk, matchtrk, etc.
             properties:  pt, eta, pdgid, etc.
 
     Returns:
-            For a particular track type, a dict from properties to values
+            A tracks properties dictionary
     """
 
-    tracks_properties = {}
-    for property in properties:
-        tracks_properties[property] = list(
-            events[track_type + "_" + property].array().flatten())
+    def get_property_list(property):
+        """Returns the list of properties corresponding to the event set,
+        track type, and property name."""
 
-    return tracks_properties
+        return list(event_set[track_type + "_" + property].array().flatten())
+
+    return dict(map(lambda property: (property, get_property_list(property)),
+        properties))
+
+
+def add_ntuple_dicts(ntuple_dicts):
+    """Adds together multiple ntuple dicts of with the same track types and
+    track type properties. Raises an exception if the dicts do not have this
+    "sameness" property.
+
+    Args:
+        ntuple_dicts:  a list of ntuple dicts with the same track types and
+            track type properties
+
+    Returns:
+        An ntuple dictionary with the lists of values of each ntuple dict in
+        the input list concatenated
+    """
+
+    return None
+
+
+def add_track_prop_dicts(track_prop_dicts):
+    """Adds together multiple track properties dicts of with the same properties.
+    Raises an exception if the dicts do not have this "sameness" property.
+
+    Args:
+        track properties_dicts:  a list of track properties dicts with the
+        same properties
+
+    Returns:
+        An track properties dictionary with the lists of values of each track
+        properties dictionary in the input list concatenated
+    """
+
+    def add_two_track_prop_dicts(tp_so_far, tp_to_add):
+        """Adds two track properties dicts together as per rules in parent function.
+        Returns the sum."""
+
+        return dict(map(lambda property, vals_so_far, vals_to_add:
+            (property, vals_so_far + vals_to_add),
+            tp_so_far.keys(), list(tp_so_far.values()), list(tp_to_add.values()))
+
+    return reduce(add_two_track_prop_dicts, track_prop_dicts)
 
 
 def cut_ntuple(ntuple_properties,
@@ -136,3 +217,4 @@ def cut_trackset_by_indices(tracks_properties, indices_to_cut):
             del cut_tracks_properties[property][track_to_cut]
 
     return cut_tracks_properties
+

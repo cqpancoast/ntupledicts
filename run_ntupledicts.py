@@ -1,5 +1,5 @@
-from uproot import open as uproot_open
 from sys import argv
+from uproot import open as uproot_open
 from ntupledicts import *
 
 
@@ -11,29 +11,29 @@ It is friendly with machine learning aims and goals, as our ML already takes
 place in Python.
 
 There are three parts to this code:
-	- Getting Data.
-		One or more ntuples is read in. If more than one ntuple is
-		read in, they are all concatenated together. More on the data
-		structures used below.
-	- Applying Cuts.
-		Place arbitrary cuts on the event collection on any property of
-		any track type.
-	- Plotting.
-		The matplotlib library is (for some) easier to work with than
-		the ROOT plotting library. However, matplotlib does not know you
-		are a pysicist! This is not intended as a replacement for ROOT,
-		just an alternative.
+    - Getting Data.
+        One or more ntuples is read in. If more than one ntuple is
+        read in, they are all concatenated together. More on the data
+        structures used below.
+    - Applying Cuts.
+        Place arbitrary cuts on the event collection on any property of
+        any track type.
+    - Plotting.
+        The matplotlib library is (for some) easier to work with than
+        the ROOT plotting library. However, matplotlib does not know you
+        are a pysicist! This is not intended as a replacement for ROOT,
+        just an alternative.
 
 
 Data Definitions and Scheme
 
-All event data is stored in an object called a track type dictionary. This is a
+All event data is stored in an object called an ntuple dictionary. This is a
 dictionary from track types ("trk", "tp", "matchtrk", "matchtp") to dicts
 from track properties ("eta", "chi2", "nmatch") to lists of properties. (These
-smaller dicts within the track type dictionaries are called "track property dicts".)
-For example, a simple track type dictionary might look like this:
+smaller dicts within the ntuple dictionaries are called "track property dicts".)
+For example, a simple ntuple dictionary might look like this:
 
-	{"trk": {"pt": [1, 2, 3], "eta": [0, 2.2, 1.1]}, "tp": {"nmatch": ...}}
+    {"trk": {"pt": [1, 2, 3], "eta": [0, 2.2, 1.1]}, "tp": {"nmatch": ...}}
 
 The values here are the track property dictionaries.
 
@@ -62,7 +62,7 @@ TODO (in mixed order of dependence/importance):
     - Include Claire's plotting functions (or altered versions of them) in
         plot file
 - make dealing with multiple event sets possible
-    - in addition, have operations for event set concatenation
+    - in addition, have operations for ntuple-dict concatenation
 - change cuts from crappy 2-arrays to configurable function objects
 - reduce import overhead; this is ridiculous
     - maybe it's only ridiculous for me though
@@ -76,7 +76,7 @@ TODO (in mixed order of dependence/importance):
 # (It isn't good practice, but this is certainly better than passing them around like dead weight.)
 
 # Input/Output global variable dict
-input_file = "data/eventsets/TTbar_PU200_D49_20.root"
+input_files = ["data/eventsets/TTbar_PU200_D49_20.root"]
 input_file_short = "ttbar_pu200_20"
 output_dir = "savedplots/"
 
@@ -84,8 +84,10 @@ output_dir = "savedplots/"
 def main(argv):
     """If first argument is the string 'length', print number of events in input file."""
 
-    # Open ntuple, specify desired properties and cuts to be applied
-    events = uproot_open(input_file)["L1TrackNtuple"]["eventTree"]
+    # Open ntuples, specify desired properties and cuts to be applied
+    event_sets = []
+    for input_file in input_files:
+        event_sets.append(uproot_open(input_file)["L1TrackNtuple"]["eventTree"])  #FIXME ntuple in file isn't always called this
     properties_by_track_type = {"trk": ["pt", "eta", "nstub", "chi2rphi", "chi2rz", "genuine", "fake"],
                                 "matchtrk": ["pt", "eta", "nstub", "chi2rphi", "chi2rz"],
                                 "tp": ["pt", "eta", "nstub", "dxy", "d0", "eventid", "nmatch"]}
@@ -93,10 +95,7 @@ def main(argv):
                         "dxy": [-1.0, 1.0], "d0": [-1.0, 1.0], "eventid": 0}}
 
     # Create ntuple properties dict from event set
-    ntuple_properties = dict(map(lambda track_type, properties:
-                                 (track_type, ntuple_to_dict(
-                                     events, track_type, properties)),
-                                 properties_by_track_type.keys(), properties_by_track_type.values()))
+    ntuple_properties = ntuples_to_ntuple_dict(event_sets, properties_by_track_type)
     ntuple_properties = cut_ntuple(ntuple_properties, cut_dicts)
 
     if len(argv) == 1:
@@ -113,7 +112,6 @@ def plot(ntuple_properties):
     Args:
         ntuple_properties:  you know, the thing
     """
-
 
     # Call appropriate plotting function(s)
 
