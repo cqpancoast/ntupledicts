@@ -1,11 +1,50 @@
-# (Our repository for) Machine Learning Studies for the CMS Track-Trigger
+#ntupledict
 
-This repo holds results of various ML studies aimed at improving CERN's CMS's upcoming track-trigger by letting the outer tracker send additional information created by ML along to the L1 Trigger for it to make decisions. Depending on a bunch of things, this repo might be split into a few in the future, or it might be moved to a repo with a different name.
+A package for dealing with CMS TrackTrigger ntuples as dictionaries. Designed with machine learning studies in mind.
 
-## What's going on here?
+There are three parts to this code:
 
-__In a sentence:__ our only current project is studying how new chi2 variables added to each track outputted by the track-trigger algorithm can improve performance of track-quality selection algorithms based on machine learning.
+- Getting Data.
+    One or more ntuples is read in. If more than one ntuple is
+    read in, they are all concatenated together. More on the data
+    structures used below.
+- Applying Cuts.
+    Place arbitrary cuts on the event collection on any property of
+    any track type.
+- Plotting.
+    The matplotlib library is (for some) easier to work with than
+    the ROOT plotting library. However, matplotlib does not know you
+    are a pysicist! This is not intended as a replacement for ROOT,
+    just an alternative.
 
-Currently, the only study-in-progress in this repository is one in which ML machines are built to make use of chi2 variables newly accessible to the L1 Trigger. Originally, there was one chi2 variable per track that showed the track's adherence to the stub sequence it was generated from, but now there is a chi2 for each track measuring its fit with in the phi plane and another for the r-z plane. _This is useful because_ electrons in particular have super high chi2 values in the phi plane when compared to other particles (like muons), but have about the same in the r-z plane. Below are some graphs that make this clear:
 
-__TODO__ add chi2/DOF graphs for singleMuon/singleElectron found from TTbar samples.
+## Data Definitions and Scheme
+
+All event data is stored in an object called an ntuple dictionary. This is a
+dictionary from track types ("trk", "tp", "matchtrk", "matchtp") to dicts
+from track properties ("eta", "chi2", "nmatch") to lists of properties. (These
+smaller dicts within the ntuple dictionaries are called "track property dicts".)
+For example, a simple ntuple dictionary might look like this:
+
+    {"trk": {"pt": [1, 2, 3], "eta": [0, 2.2, 1.1]}, "tp": {"nmatch": ...}}
+
+The values here are the track property dictionaries.
+
+In the main method, you can specify which properties you want to access from
+the ntuple to have in your track type dictionary. This is nice, because you don't
+have to deal with hauling around any more data than you have to!
+
+
+## Applying Cuts
+
+To perform a cut on a track type dictionary... TODO docs!!!
+
+
+## Plotting
+
+All plotting functions follow certain rules:
+    - All return an axes object
+    - None clear or save the figure
+    - Some set labels (x-axis, y-axis, title) but some do not
+
+
