@@ -1,6 +1,8 @@
 from sys import argv
 from uproot import open as uproot_open
-from ntupledicts import *
+from ntupledicts import ntuple_dict_operations as ndops
+from ntupledicts.ntuple_dict_operations import select as sel
+from ntupledicts import ntuple_dict_plot as ndplot
 
 
 """
@@ -61,13 +63,13 @@ TODO (in mixed order of dependence/importance):
 - make it play nice with ML stuff
     - Include Claire's plotting functions (or altered versions of them) in
         plot file
-- make dealing with multiple event sets possible
-    - in addition, have operations for ntuple-dict concatenation
-- change cuts from crappy 2-arrays to configurable function objects
 - reduce import overhead; this is ridiculous
-    - maybe it's only ridiculous for me though
+    - maybe it's only ridiculous for me on lxplus though
 - reduce every line down to 80 characters to comply with Python standards
 - unit tests? Is that the physicist way? (Do I have the time or patience?)
+- fix ROC curve plot fxn whenever you feel like it
+    - doing this requires making selectors into objects so that you can
+        get info about them explicitly
 
 """
 
@@ -82,31 +84,27 @@ output_dir = "savedplots/"
 
 
 def main(argv):
-    """If first argument is the string 'length', print number of events in input file."""
 
     # Open ntuples, specify desired properties and cuts to be applied
     event_sets = []
     for input_file in input_files:
-        event_sets.append(uproot_open(input_file)["L1TrackNtuple"]["eventTree"])  #FIXME ntuple in file isn't always called this
+        event_sets.append(next(iter(uproot_open(input_file).values()))["eventTree"])
     properties_by_track_type = {"trk": ["pt", "eta", "nstub", "chi2rphi", "chi2rz", "genuine", "fake"],
                                 "matchtrk": ["pt", "eta", "nstub", "chi2rphi", "chi2rz"],
                                 "tp": ["pt", "eta", "nstub", "dxy", "d0", "eventid", "nmatch"]}
-    cut_dicts = {"tp": {"eta": [-2.4, 2.4], "pt": [2, 100], "nstub": [4, 999],
-                        "dxy": [-1.0, 1.0], "d0": [-1.0, 1.0], "eventid": 0}}
+    cut_dicts = {"tp": {"eta": sel(-2.4, 2.4), "pt": sel(2, 100), "nstub": sel(4, 999),
+                        "dxy": sel(-1.0, 1.0), "d0": sel(-1.0, 1.0), "eventid": sel(0)}}
 
     # Create ntuple properties dict from event set
-    ntuple_properties = ntuples_to_ntuple_dict(event_sets, properties_by_track_type)
-    ntuple_properties = cut_ntuple(ntuple_properties, cut_dicts)
+    ntuple_properties = ndops.ntuples_to_ntuple_dict(event_sets, properties_by_track_type)
+    ntuple_properties = ndops.cut_ntuple(ntuple_properties, cut_dicts)
 
-    if len(argv) == 1:
-        plot(ntuple_properties)
-    elif len(argv) == 2 and argv[1] == "length":
-        track_type = next(iter(properties_by_track_type.keys()))
-        print(
-            len(events[track_type + "_" + properties_by_track_type[track_type][0]]))
+    go(ntuple_properties)
+
+    print("Process complete. Exiting program.")
 
 
-def plot(ntuple_properties):
+def go(ntuple_properties):
     """Call functions from the file where all the plots are!
 
     Args:
@@ -115,35 +113,39 @@ def plot(ntuple_properties):
 
     # Call appropriate plotting function(s)
 
-    """
-    ax = plot_roc_curve(ntuple_properties, "chi2rphi", [[0, 9999], [0, 500], [0, 100], [0, 70], [0, 50], [0, 40], [0, 30], [0, 20], [0, 10], [0, 5]], group_name="allpt", save_plot=True)
-    axz = plot_roc_curve(ntuple_properties, "chi2rz", [[0, 9999], [0, 500], [0, 50], [0, 20], [0, 11], [0, 10], [0, 9], [0, 8], [0, 7], [0, 6], [0, 5]], group_name="allpt", save_plot=True)
-    ntuple_properties = cut_ntuple(ntuple_properties, {"trk": {"pt": [8, 13000]}, "tp": {"pt": [8, 13000]}})
-    plot_roc_curve(ntuple_properties, "chi2rphi", [[0, 9999], [0, 500], [0, 100], [0, 70], [0, 50], [0, 40], [0, 30], [0, 20], [0, 10], [0, 5]], group_name="pt8", ax=ax, color='orange')
-    plot_roc_curve(ntuple_properties, "chi2rz", [[0, 9999], [0, 500], [0, 50], [0, 20], [0, 11], [0, 10], [0, 9], [0, 8], [0, 7], [0, 6], [0, 5]], group_name="pt8")#, ax=axz, color='orange')
-    """
+    # TODO machine learning stuff here
 
-    genuine_properties = cut_trackset(ntuple_properties["trk"], {"genuine": 0})
-    not_genuine_properties = cut_trackset(
-        ntuple_properties["trk"], {"genuine": 1})
-    fake_properties = cut_trackset(ntuple_properties["trk"], {"fake": 0})
-    not_fake_properties_primary = cut_trackset(
-        ntuple_properties["trk"], {"fake": 1})
-    not_fake_properties_secondary = cut_trackset(
-        ntuple_properties["trk"], {"fake": 2})
+    """
+    ax = ndplot.plot_roc_curve(ntuple_properties, "chi2rphi", [sel(0, 9999), sel(0, 500), sel(0, 100), sel(0, 70), sel(0, 50), sel(0, 40), sel(0, 30), sel(0, 20), sel(0, 10), sel(0, 5)], group_name="allpt")
+    #axz = ndplot.plot_roc_curve(ntuple_properties, "chi2rz", [sel(0, 9999), sel(0, 500), sel(0, 50), sel(0, 20), sel(0, 11), sel(0, 10), sel(0, 9), sel(0, 8), sel(0, 7), sel(0, 6), sel(0, 5)], group_name="allpt")
+    ntuple_properties = ndops.cut_ntuple(ntuple_properties, {"trk": {"pt": sel(8, 100)}, "tp": {"pt": sel(8, 100)}})
+    ndplot.plot_roc_curve(ntuple_properties, "chi2rphi", [sel(0, 9999), sel(0, 500), sel(0, 100), sel(0, 70), sel(0, 50), sel(0, 40), sel(0, 30), sel(0, 20), sel(0, 10), sel(0, 5)], group_name="pt8", ax=ax, color='orange')
+    ndplot.plt.savefig("beepbooptest.pdf")
+    #ndplot.plot_roc_curve(ntuple_properties, "chi2rz", [sel(0, 9999), sel(0, 500), sel(0, 50), sel(0, 20), sel(0, 11), sel(0, 10), sel(0, 9), sel(0, 8), sel(0, 7), sel(0, 6), sel(0, 5)], group_name="pt8")#, ax=axz, color='orange')
 
-    overlay({"primary-vertex": not_fake_properties_primary["chi2rphi"],
+
+    genuine_properties = ndops.cut_trackset(
+        ntuple_properties["trk"], {"genuine": sel(0)})
+    not_genuine_properties = ndops.cut_trackset(
+        ntuple_properties["trk"], {"genuine": sel(1)})
+    fake_properties = ndops.cut_trackset(
+        ntuple_properties["trk"], {"fake": sel(0)})
+    not_fake_properties_primary = ndops.cut_trackset(
+        ntuple_properties["trk"], {"fake": sel(1)})
+    not_fake_properties_secondary = ndops.cut_trackset(
+        ntuple_properties["trk"], {"fake": sel(2)})
+
+    ndplot.overlay({"primary-vertex": not_fake_properties_primary["chi2rphi"],
              "secondary-vertex": not_fake_properties_secondary["chi2rphi"],
              "fake": fake_properties["chi2rphi"]}, "chi2rphi", "trk_fake_dist")
-    overlay({"primary-vertex": not_fake_properties_primary["chi2rz"],
+    ndplot.overlay({"primary-vertex": not_fake_properties_primary["chi2rz"],
              "secondary-vertex": not_fake_properties_secondary["chi2rz"],
              "fake": fake_properties["chi2rz"]}, "chi2rz", "trk_fake_dist")
-    overlay({"genuine": genuine_properties["chi2rphi"],
+    ndplot.overlay({"genuine": genuine_properties["chi2rphi"],
              "fake": not_genuine_properties["chi2rphi"]}, "chi2rphi", "trk_genuine_dist")
-    overlay({"genuine": genuine_properties["chi2rz"],
+    ndplot.overlay({"genuine": genuine_properties["chi2rz"],
              "fake": not_genuine_properties["chi2rz"]}, "chi2rz", "trk_genuine_dist")
-
-    print("Process complete. Exiting program.")
+    """
 
 
 main(argv)

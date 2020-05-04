@@ -1,4 +1,3 @@
-from ntupledicts import *
 from copy import deepcopy
 from functools import reduce
 
@@ -18,9 +17,55 @@ def ntuples_to_ntuple_dict(event_sets, properties_by_track_type):
         An ntuple dictionary
     """
 
-    return add_ntuple_dicts(map(lambda event_set: 
+    return add_ntuple_dicts(list(map(lambda event_set: 
         ntuple_to_ntuple_dict(event_set, properties_by_track_type), 
-        event_sets))
+        event_sets)))
+
+
+def add_ntuple_dicts(ntuple_dicts):
+    """Adds together multiple ntuple dicts of with the same track types and
+    track type properties. Raises an exception if the dicts do not have this
+    "sameness" property.
+
+    Args:
+        ntuple_dicts:  a list of ntuple dicts with the same track types and
+            track type properties
+
+    Returns:
+        An ntuple dictionary with the lists of values of each ntuple dict in
+        the input list concatenated
+    """
+    
+    track_types = iter(next(iter(ntuple_dicts)).keys())
+
+    return dict(map(lambda track_type:
+        (track_type, add_track_prop_dicts(
+            list(map(lambda ntuple: ntuple[track_type], ntuple_dicts)))),
+        track_types))
+
+
+def add_track_prop_dicts(track_prop_dicts):
+    """Adds together multiple track properties dicts of with the same properties.
+    Raises an exception if the dicts do not have this "sameness" property.
+
+    Args:
+        track properties_dicts:  a list of track properties dicts with the
+        same properties
+
+    Returns:
+        An track properties dictionary with the lists of values of each track
+        properties dictionary in the input list concatenated
+    """
+
+    def add_two_track_prop_dicts(tp_so_far, tp_to_add):
+        """Adds two track properties dicts together as per rules in parent function.
+        Returns the sum."""
+
+        return dict(map(lambda property, vals_so_far, vals_to_add:
+            (property, vals_so_far + vals_to_add),
+            tp_so_far.keys(), list(tp_so_far.values()), list(tp_to_add.values())))
+
+    return reduce(add_two_track_prop_dicts, track_prop_dicts)
 
 
 def ntuple_to_ntuple_dict(event_set, properties_by_track_type):
@@ -36,11 +81,11 @@ def ntuple_to_ntuple_dict(event_set, properties_by_track_type):
     """
 
     return dict(map(lambda track_type, properties: 
-        (track_type, ntuple_to_tracks_prop_dict(event_set, track_type, properties)),
+        (track_type, ntuple_to_track_prop_dict(event_set, track_type, properties)),
         properties_by_track_type.keys(), properties_by_track_type.values()))
 
 
-def ntuple_to_tracks_prop_dict(event_set, track_type, properties):
+def ntuple_to_track_prop_dict(event_set, track_type, properties):
     """Takes in an uproot ntuple, the data type, and properties to be extracted;
     returns a dictionary from a property name to flattened array of values.
     Note that due to this flattening, all information about which tracks are
@@ -65,60 +110,98 @@ def ntuple_to_tracks_prop_dict(event_set, track_type, properties):
         properties))
 
 
-def add_ntuple_dicts(ntuple_dicts):
-    """Adds together multiple ntuple dicts of with the same track types and
-    track type properties. Raises an exception if the dicts do not have this
-    "sameness" property.
+def reduce_ntuple_dict(ntuple_dict, track_limit=10):
+    """Reduces an ntuple dictionary to a number of tracks. If number of tracks
+    in the ntuple is less than the track limit specified, print all tracks.
+    Can be used for convenient print debugging. Does not affect the original
+    ntuple dictionary.
 
     Args:
-        ntuple_dicts:  a list of ntuple dicts with the same track types and
-            track type properties
+        ntuple_dict:  an ntuple dictionary
+        track limit:  number of tracks to retain in each value list. Or, an
+            integer that will be expanded into a corresponding dictionary
 
     Returns:
-        An ntuple dictionary with the lists of values of each ntuple dict in
-        the input list concatenated
+        An ntuple dictionary with track_limit tracks.
     """
 
-    return None
+    # Get track_limit into correct form if it's an int
+    if isinstance(track_limit, int):
+        track_limit = dict(map(lambda track_type:
+            (track_type, track_limit),
+            ntuple_dict.keys()))
+
+    return dict(map(lambda track_type, track_prop_dict:
+        (track_type, reduce_track_prop_dict(
+            track_prop_dict, track_limit[track_type])),
+        ntuple_dict.keys(), ntuple_dict.values()))
 
 
-def add_track_prop_dicts(track_prop_dicts):
-    """Adds together multiple track properties dicts of with the same properties.
-    Raises an exception if the dicts do not have this "sameness" property.
+def reduce_track_prop_dict(track_prop_dict, track_limit=10):
+    """Reduces a track properties dictionary such that each of its value
+    lists are only a certain length. Does not affect the original track
+    property dictionary.
 
     Args:
-        track properties_dicts:  a list of track properties dicts with the
-        same properties
+        track_prop_dict:  a track properties dictionary
+        track_limit:  the maximum length for a value list
 
     Returns:
-        An track properties dictionary with the lists of values of each track
-        properties dictionary in the input list concatenated
+        A track properties dictionary with reduced-length value lists.
     """
 
-    def add_two_track_prop_dicts(tp_so_far, tp_to_add):
-        """Adds two track properties dicts together as per rules in parent function.
-        Returns the sum."""
-
-        return dict(map(lambda property, vals_so_far, vals_to_add:
-            (property, vals_so_far + vals_to_add),
-            tp_so_far.keys(), list(tp_so_far.values()), list(tp_to_add.values()))
-
-    return reduce(add_two_track_prop_dicts, track_prop_dicts)
+    return dict(map(lambda track_prop, track_prop_vals:
+        (track_prop, track_prop_vals[:min(track_limit, len(track_prop_vals))]),
+        track_prop_dict.keys(), track_prop_dict.values()))
 
 
-def cut_ntuple(ntuple_properties,
-               cut_dicts={"tp": {"eta": [-2.4, 2.4], "pt": [2, 13000], "nstub": [4, 999]},
-                          "trk": {"eta": [-2.4, 2.4], "pt": [2, 13000], "nstub": [4, 999]}}):
-    """Takes in this file's representation of an ntuple (a dict from track types
-    to dicts from properties to value lists) and cuts each trackset. Takes into
-    account that matchtrks and tps must be cut together, and that trks and matchtps
-    must be cut together as well."""
+def select(*selector_key):
+    """Takes in a selector key and returns a selector that returns true for
+    selected values and false for non-selected values. This is how cuts are
+    applied in this setup.
+    
+    Args:
+        selector_key:  If a single number, the selector will return true for
+            that number. If two numbers, the selector will return true for
+            numbers in that range, inclusive.
+
+    Returns:
+        A selector, a function that returns true for some numbers and false
+        for others.
+
+    Raises:
+        ValueError:  for invalid selector keys
+    """
+
+    if len(selector_key) == 1:
+        return lambda val: val == next(iter(selector_key))
+    if len(selector_key) == 2:
+        return lambda val: val >= selector_key[0] and val <= selector_key[1]
+    else:
+        raise ValueError("Invalid selector key: {}. Read the docs!"
+                .format(selector_key))
+
+
+def cut_ntuple(ntuple_dict, cut_dicts={}):
+    """Cuts an ntuple dictionary by cutting each track type according to a
+    selector dictionary, cutting those tracks not selected. Tracks are cut
+    "symmetrically" across corresponding groups, meaning that any cuts applied
+    to trks are applied to matchtps, and from tps to matchtrks, and vice versa.
+
+    Args:
+        ntuple_dict:  an ntuple dictionary
+        cut_dicts:  a dictionary from track types to dictionaries from track
+            properties to selectors
+
+    Returns:
+        A cut ntuple dictionary
+    """
 
     # Build list of tracks to cut from tp/matchtrk group and trk/matchtp groups
     cut_indices_dict = {"trk": [], "matchtrk": [], "tp": [], "matchtp": []}
     cut_indices_dict.update(dict(map(lambda track_type, cut_dict:
-                                     (track_type, get_indices_meeting_conditions(
-                                         ntuple_properties[track_type], cut_dict)),
+                                     (track_type, select_indices(
+                                         ntuple_dict[track_type], cut_dict)),
                                      cut_dicts.keys(), cut_dicts.values())))
 
     # Combine trk and matchtp, tp and matchtrk indices to remove (respectively), sorting and removing duplicates
@@ -127,94 +210,119 @@ def cut_ntuple(ntuple_properties,
     tp_matchtrk_indices_to_cut = sorted(
         list(dict.fromkeys(cut_indices_dict["tp"] + cut_indices_dict["matchtrk"])))
 
-    cut_ntuple_properties = {}
-    for track_type, trackset in ntuple_properties.items():
+    cut_ntuple_dict = {}
+    for track_type, trackset in ntuple_dict.items():
         if track_type in ["trk", "matchtp"]:
             indices_to_cut = trk_matchtp_indices_to_cut
         if track_type in ["tp", "matchtrk"]:
             indices_to_cut = tp_matchtrk_indices_to_cut
-        cut_ntuple_properties[track_type] = cut_trackset_by_indices(
-            ntuple_properties[track_type], indices_to_cut)
+        cut_ntuple_dict[track_type] = cut_trackset_by_indices(
+            ntuple_dict[track_type], indices_to_cut)
 
-    return cut_ntuple_properties
-
-
-def cut_trackset(tracks_properties, cut_dict={"eta": [-2.4, 2.4], "pt": [2, 13000], "nstub": [4, 999]}):
-    """Cuts a trackset (trk_XYZ, tp_XYZ, etc.) given the cut dicts."""
-
-    return cut_trackset_by_indices(tracks_properties,
-                                   get_indices_meeting_conditions(tracks_properties, cut_dict))
+    return cut_ntuple_dict
 
 
-def get_indices_meeting_conditions(tracks_properties, cond_dict={}):
-    """Takes in a dictionary from track properties to a list of corresponding
-    values and conditions to select tracks from the set. If a value from the cond dict
-    is not in the track properties, the program will not select, but will report it.
-    Selection conditions are the name of a property, and then either:
-            - a list containing a lower and upper bound, both inclusive.
-            - a single number indicating a value to be selected.
+def cut_trackset(track_prop_dict, cut_dict={}):
+    """Cuts an track properties dictionary by cutting each track type according
+    to a cut dictionary.
 
-    For a selection to take place, the property value lists in tracks_properties must
-    all be the same size. This function asserts that this is the case.
+    Args:
+        track_prop_dict:  a tracks properties dictionary
+        cut_dicts:  a from track properties to cuts
 
-    Returns a list of indices that meet the conditions.
+    Returns:
+        A cut tracks properties dictionary
     """
 
-    # Assert that all property lists are the same size
-    supposed_num_tracks = len(next(iter(tracks_properties.values())))
-    for track_property_values in tracks_properties.values():
-        assert(len(track_property_values) == supposed_num_tracks)
-    num_tracks = supposed_num_tracks
+    return cut_trackset_by_indices(track_prop_dict,
+            select_indices(track_prop_dict, cut_dict))
+
+
+def select_indices(track_prop_dict, selector_dict, invert=True):
+    """Selects indices from a tracks properties dictionary that meet the
+    conditions of the selector dictionary. If a property is in the selector
+    dict but not in the tracks properties dict, the program won't raise an
+    exception, but will print a message.
+
+    Args:
+        track_prop_dict:  a tracks properties dictionary
+        selector_dict:  a dictionary from track property names to selectors
+        inverse:  return all indices NOT selected. Default is True as this
+            jibes with how this function is mainly used: track cuts
+
+    Returns:
+        Indices from the track properties dict selected by the selector dict
+    """
 
     # Determine which selection conditions will be applied
-    for property in cond_dict.keys():
-        if property not in tracks_properties.keys():
+    for property in selector_dict.keys():
+        if property not in track_prop_dict.keys():
             print(property + " not in tracks properties; will not select")
-            cond_dict.pop(property)
+            selector_dict.pop(property)
 
-    def select_track_property(track_property, cond):
-        """Returns whether this track property needs to be selected."""
+    def index_meets_selection(track_index):
+        """Determine if the track at this index is selected by the selector
+        dict."""
 
-        if isinstance(cond, list):
-            return track_property < cond[0] or track_property > cond[1]
-        else:
-            return track_property != cond
+        return all(list(map(lambda track_property, property_selector:
+            property_selector(track_prop_dict[track_property][track_index]),
+            selector_dict.keys(), selector_dict.values())))
 
-    # Build up a list of indices of tracks to select
-    tracks_to_select = []
-    for track_index in range(num_tracks):
-        for property, cond in cond_dict.items():
-            if select_track_property(tracks_properties[property][track_index], cond):
-                tracks_to_select.append(track_index)
-                break
-
-    return tracks_to_select
+    track_indices = range(len(next(iter(track_prop_dict.values()))))
+    return list(filter(lambda track_index:
+            invert != index_meets_selection(track_index),
+            track_indices))
 
 
-def cut_trackset_by_indices(tracks_properties, indices_to_cut):
+def cut_trackset_by_indices(track_prop_dict, indices_to_cut):
     """Takes in a list of indices to cut and cuts those indices from the
-    lists of the dictionary. Assumes that all lists in tracks_properties
+    lists of the dictionary. Assumes that all lists in track_prop_dict
     are the same size. This list of indices will frequently be generated
     using get_indices_meeting_condition. The list of indices does not
     have to be sorted by size.
 
     Args:
-            tracks_properties:  a dictionary from track property names to
-                    lists of track property values.
+            track_prop_dict:  a tracks properties dictionary
             indices_to_cut:  a collection of indices to cut. Repeats are
                     tolerated, but out-of-range indices will result in an
                     exception.
 
     Returns:
-            A trackset of the same form as the input, but with the indices
+            The same tracks properties dictionary with the given indices
             on its value lists removed.
     """
 
     # Copy, then delete all tracks (going backwards so as not to affect indices)
-    cut_tracks_properties = deepcopy(tracks_properties)
+    cut_track_prop_dict = deepcopy(track_prop_dict)
     for track_to_cut in reversed(sorted(indices_to_cut)):
-        for property in cut_tracks_properties.keys():
-            del cut_tracks_properties[property][track_to_cut]
+        for property in cut_track_prop_dict.keys():
+            del cut_track_prop_dict[property][track_to_cut]
 
-    return cut_tracks_properties
+    return cut_track_prop_dict
+
+
+def get_proportion_selected(tracks_property, selector, norm=True):
+    """Find the proportion of tracks selected with the given selector.
+    If there are no tracks in the tracks property value list, returns zero.
+    Can also return the number of tracks meeting the condition.
+
+    Args:
+            tracks_property:  a list of values of a track property, such as
+                    trk_pt or tp_chi2rphi
+            property_condition:  a property that these value can satisfy. For
+                    example, "lambda trk_eta: trk_eta <= 2.4".
+            norm:  if True, divides the number of tracks meeting the condition
+                    by the total number of tracks. This is the default option.
+
+    Returns:
+            Either the number or proportion of tracks meeting the condition,
+            depending on the value of norm.
+    """
+
+    if len(tracks_property) == 0:
+        print("Cannot calculate proportion meeting condition in zero-length quantity. Returning zero.")
+        return 0
+
+    num_tracks_meeting_cond = sum(map(selector, tracks_property))
+    return float(num_tracks_meeting_cond) / len(tracks_property) if norm else num_tracks_meeting_cond
 

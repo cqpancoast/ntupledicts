@@ -3,33 +3,8 @@ from copy import deepcopy
 from math import sqrt
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from ntupledicts import *
+from ntupledicts import ntuple_dict_operations as ndops
 
-
-def get_proportion_meeting_condition(tracks_property, property_condition, norm=True):
-    """Find the proportion of tracks whose given property meets a condition.
-    If the number of tracks is zero, returns zero. Can also return the number
-    of tracks meeting the condition.
-
-    Args:
-            tracks_property:  a list of values of a track property, such as
-                    trk_pt or tp_chi2rphi
-            property_condition:  a property that these value can satisfy. For
-                    exampe, "lambda trk_eta: trk_eta <= 2.4".
-            norm:  if True, divides the number of tracks meeting the condition
-                    by the total number of tracks. This is the default option.
-
-    Returns:
-            Either the number or proportion of tracks meeting the condition,
-            depending on the value of norm.
-    """
-
-    if len(tracks_property) == 0:
-        print("Cannot calculate proportion meeting condition in zero-length quantity. Returning zero.")
-        return 0
-
-    num_tracks_meeting_cond = sum(map(property_condition, tracks_property))
-    return float(num_tracks_meeting_cond) / len(tracks_property) if norm else num_tracks_meeting_cond
 
 
 def eff_from_ntuple(ntuple_properties, tp_cond_dict={}):
@@ -47,7 +22,7 @@ def eff_from_ntuple(ntuple_properties, tp_cond_dict={}):
     """
 
     # Cutting on tracking particles also cuts the corresponding matchtracks
-    cut_ntuple_properties = cut_ntuple(ntuple_properties, {"tp": tp_cond_dict})
+    cut_ntuple_properties = ndops.cut_ntuple(ntuple_properties, {"tp": tp_cond_dict})
     tps_nmatch = cut_ntuple_properties["tp"]["nmatch"]
 
     # Now, count how many tp's have an nmatch value greater than zero
@@ -55,7 +30,7 @@ def eff_from_ntuple(ntuple_properties, tp_cond_dict={}):
 
 
 def plot_roc_curve(ntuple_properties_in, cut_property, cuts, cuts_increasing=True, group_name="",
-                   ax=plt.figure().add_subplot(111), save_plot=True, color='blue'):
+                   ax=plt.figure().add_subplot(111), color='blue'):
     """Adjusts the cut on a certain variable in an event set and plots the change in
     tracking efficiency and fake rate.
 
@@ -69,7 +44,6 @@ def plot_roc_curve(ntuple_properties_in, cut_property, cuts, cuts_increasing=Tru
             group_name: if you are plotting this data with other data, this will be the
                     legend label
             ax: if you are plotting this data with other data, you can pass a previous axis in
-            save_plot: whether to save the plot
 
     Returns:
             The axes object used to plot this graph, for use in overlaying
@@ -81,33 +55,31 @@ def plot_roc_curve(ntuple_properties_in, cut_property, cuts, cuts_increasing=Tru
     # Build up cuts plot info, which is what will be plotted
     cuts_plot_info = {"cut": [], "eff": [], "fake_rate": []}
     trackset_to_cut = {}
-    cut_tracks_properties = ntuple_properties["trk"]
-    cut_matchtracks_properties = ntuple_properties["matchtrk"]
+    cut_ntuple_properties = ntuple_properties
     for cut in cuts:
         trackset_to_cut["trk"] = cut_tracks_properties if cuts_increasing else ntuple_properties["trk"]
         trackset_to_cut["matchtrk"] = cut_matchtracks_properties if cuts_increasing else ntuple_properties["matchtrk"]
-        cut_tracks_properties = cut_trackset(
-            trackset_to_cut["trk"], {cut_property: cut})
-        cut_matchtracks_properties = cut_trackset(
-            trackset_to_cut["matchtrk"], {cut_property: cut})
+        cut_tracks_properties = ndops.cut_trackset(
+            trackset_to_cut["trk"], {cut_property: ndops.select(*cut)})
+        cut_matchtracks_properties = ndops.cut_trackset(
+            trackset_to_cut["matchtrk"], {cut_property: ndops.slect(*cut)})
         cuts_plot_info["cut"].append(cut[1])  # only get upper bound of cut
-        cuts_plot_info["eff"].append(eff_from_matchtrks_and_tps(
+        cuts_plot_info["eff"].append(eff_from_ntuple(
             cut_matchtracks_properties["pt"], ntuple_properties["tp"]["pt"]))
-        cuts_plot_info["fake_rate"].append(get_proportion_meeting_condition(
+        cuts_plot_info["fake_rate"].append(ndops.get_proportion_selected(
             cut_tracks_properties["genuine"], lambda gen_track: gen_track == 0))
 
     # Now plot!
     ax.plot(cuts_plot_info["fake_rate"], cuts_plot_info["eff"],
             "b.", label=group_name, color=color)
 
-    if save_plot:
-        ax.set_xlabel("Track fake rate")
-        ax.set_ylabel("Tracking efficiency")
-        ax.legend()
-        # for fake_rate, eff, cut in zip(cuts_plot_info["fake_rate"], cuts_plot_info["eff"], cuts_plot_info["cut"]):
-        #ax.annotate(str(cut), ax=(fake_rate, eff))
-        ax.set_title("Fake rate and efficiency for changing " +
-                     cut_property + " cuts " + group_name)
+    ax.set_xlabel("Track fake rate")
+    ax.set_ylabel("Tracking efficiency")
+    ax.legend()
+    # for fake_rate, eff, cut in zip(cuts_plot_info["fake_rate"], cuts_plot_info["eff"], cuts_plot_info["cut"]):
+    #ax.annotate(str(cut), ax=(fake_rate, eff))
+    ax.set_title("Fake rate and efficiency for changing " +
+                 cut_property + " cuts " + group_name)
 
     return ax
 
@@ -183,7 +155,7 @@ def hist2D_properties(property1, property2, property1name="", property2name="",
     """Make a 2D histogram with property 1 on the x axis and property 2 on 
     the y axis."""
 
-    cmap = mpl.cm.viridis
+    cmap = mpl.cm.get_cmap("viridis")
     cmap.set_under("w")
 
     ax = plt.figure().add_subplot(111)
