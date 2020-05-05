@@ -1,13 +1,11 @@
-#import pickle
-import numpy as np
+import tensorflow as tf
 
 
-def make_datasets_from_track_properties_dict(track_prop_dict, 
+def make_datasets_from_track_prop_dict(track_prop_dict, 
         label_property="genuine", tet_dist={"train": .7, "eval": .2, "test": .1},
         name="dataset", outputdir="saveddata", seed=None):
     """Creates train, eval, and test datasets each composed of a feature
-    array and a label array; pickles and saves them somewhere as numpy
-    arrays.
+    array and a label array.
 
     Args:
         track_prop_dict:  a track properties dictionary. Is not altered by
@@ -24,28 +22,37 @@ def make_datasets_from_track_properties_dict(track_prop_dict,
     Returns:
         Four two-tuples, each containing the feature and label components
         of the property names, the training set, the eval set, and the test
-        set, all stored as numpy arrays
+        set, all stored as tensorflow tensors
     """
 
-    np.random.seed(seed)
-
     feature_properties = list(track_prop_dict.keys()).remove(label_property)
-    feature_array = np.random.shuffle(np.array(list(track_prop_dict.values())))
-    label_array = np.random.shuffle(np.array(track_prop_dict[label_property]))
+    label_array = tf.constant(track_prop_dict.pop(label_property)) #TODO labels of more than one element?
+    feature_array = tf.transpose(tf.constant(list(track_prop_dict.values())))
 
-    def get_dataset_split_nums(tet_dist, num_tracks):
-        """Returns the indices down which to split the dataset using np.split."""
+    # Shuffle the arrays in a reproducable manner
+    tf.random.set_seed(seed)
+    tf.random.shuffle(feature_array)
+    tf.random.shuffle(label_array)
+
+    def get_dataset_split_sizes(tet_dist, num_tracks):
+        """Returns the sizes of the data."""
 
         tet_dist_total = sum(tet_dist.values())
-        return map(lambda split_val: float(split_val) * num_tracks / tet_dist_total,
-                list(tet_dist.values())[:-1])
+        dataset_split_sizes = list(map(lambda split_val:
+            int(split_val * num_tracks / tet_dist_total),
+            list(tet_dist.values())))
 
-    dataset_split_nums = get_dataset_split_nums(tet_dist,
-            np.ndarray.size(feature_array))
-    train_features, eval_features, test_features = np.split(
-            feature_array, dataset_split_nums, axis=1)
-    train_labels, eval_labels, test_labels = np.split(
-            label_array, dataset_split_nums, axis=1)
+        # Ensure the split sizes add up to the total number of tracks
+        dataset_split_sizes[-1] += num_tracks - sum(dataset_split_sizes)
+
+        return dataset_split_sizes
+
+    dataset_split_sizes = get_dataset_split_sizes(tet_dist,
+            int(tf.shape(feature_array)[0]))
+    train_features, eval_features, test_features = tf.split(
+            feature_array, dataset_split_sizes)
+    train_labels, eval_labels, test_labels = tf.split(
+            label_array, dataset_split_sizes)
 
     return (feature_properties, label_property), (train_features, train_labels),\
             (eval_features, eval_labels), (test_features, test_labels)

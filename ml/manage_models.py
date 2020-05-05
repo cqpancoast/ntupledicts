@@ -1,20 +1,31 @@
-import pickle
 import tensorflow as tf
 import tensorflow.keras as keras
-
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Dense
 
 def make_neuralnet(train_features, train_truth, validation_data=None, 
         hidden_layers=[], epochs=10):
     """TODO"""
 
+    num_data = train_features.shape[0]
+    feature_dim = train_features.shape[1]
+
+    layer_sizes = iter([feature_dim] + hidden_layers + [2])  #TODO generalize past two
+
     # Build the scaffolding
-    linear_model = tf.keras.Sequential()
-    linear_model.add(Dense(all_layer_sizes[1], input_dim=all_layer_sizes[0]))
-    for layer_size in all_layer_sizes[2:]:
+    linear_model = Sequential()
+    input_dim = next(layer_sizes)
+    linear_model.add(Dense(next(layer_sizes), input_dim=input_dim))
+    for layer_size in layer_sizes:
         linear_model.add(Dense(layer_size))
 
+    # Compile
+    linear_model.compile(loss='binary_crossentropy',
+            optimizer='adam',
+            metrics=['accuracy'])
+
     # Train loop
-    steps_per_epoch = np.size(train_truth)
+    steps_per_epoch = num_data / epochs
     linear_model.fit(train_features, train_truth,
                      validation_data=validation_data,
                      steps_per_epoch=steps_per_epoch,
@@ -27,5 +38,5 @@ def make_neuralnet(train_features, train_truth, validation_data=None,
 def test_model(model, test_features, test_truth):
     """Test a model's performance on a test dataset."""
 
-    
+    return model.evaluate(test_features, test_truth)
 
