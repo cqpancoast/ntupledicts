@@ -1,4 +1,4 @@
-#ntupledict
+# ntupledicts
 
 A package for dealing with CMS TrackTrigger ntuples as dictionaries. Designed with machine learning studies in mind.
 
