@@ -24,6 +24,9 @@ def make_neuralnet(train_features, train_truth, validation_data=None,
             optimizer='adam',
             metrics=['accuracy'])
 
+    # Print summary
+    linear_model.summary()
+
     # Train loop
     steps_per_epoch = num_data / epochs
     linear_model.fit(train_features, train_truth,
