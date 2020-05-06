@@ -3,7 +3,7 @@ from copy import deepcopy
 from math import sqrt
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from ntupledicts import operations as ndops
+import operations as ndops
 
 
 

@@ -30,11 +30,18 @@ def make_datasets_from_track_prop_dict(track_prop_dict,
     label_array = tf.constant(track_prop_dict.pop(label_property)) #TODO labels of more than one element?
     data_array = tf.transpose(tf.constant(list(track_prop_dict.values())))
 
+    print(label_array)
+    print(data_array)
+
     if shuffle:
         # Shuffle the arrays in a reproducable manner
         tf.random.set_seed(seed)
-        tf.random.shuffle(data_array)
-        tf.random.shuffle(label_array)
+        data_array = tf.random.shuffle(data_array)
+        label_array = tf.random.shuffle(label_array)
+
+    print("SHUFFLED")
+    print(label_array)
+    print(data_array)
 
     def get_dataset_split_sizes(split_dist, num_tracks):
         """Returns the sizes of the data."""

@@ -1,9 +1,10 @@
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import Dense
+from sklearn.ensemble import GradientBoostingClassifier
 
 
-def make_neuralnet(train_data, train_labels, validation_data=None, 
-        hidden_layers=[], epochs=10):
+def make_neuralnet(train_data, train_labels, validation_data=None,
+                   hidden_layers=[], epochs=10):
     """Makes a neural net in tensorflow using training data and optional
     validation data.
 
@@ -11,8 +12,8 @@ def make_neuralnet(train_data, train_labels, validation_data=None,
         train_data:  a tf tensor, indexed by track on the 0th axis and
             track property on the 1st axis, containing a track property
             value
-        train_labels:  a tf tensor indexed by track, containing the trackset's
-            labeled data
+        train_labels:  a tf tensor indexed by track, containing the
+            trackset's labeled data
         validation_data:  a 2-tuple contianing a data/label pair in the
             same form as train_data and train_labels for use in validation
         hidden_layers:  a list of hidden layer sizes. By default, there are
@@ -27,7 +28,8 @@ def make_neuralnet(train_data, train_labels, validation_data=None,
     num_data = train_data.shape[0]
     data_dim = train_data.shape[1]
 
-    layer_sizes = iter([data_dim] + hidden_layers + [2])  #TODO generalize past two
+    layer_sizes = iter(
+        [data_dim] + hidden_layers + [2])  # TODO generalize
 
     # Build the scaffolding
     linear_model = Sequential()
@@ -38,8 +40,8 @@ def make_neuralnet(train_data, train_labels, validation_data=None,
 
     # Compile
     linear_model.compile(loss='binary_crossentropy',
-            optimizer='adam',
-            metrics=['accuracy'])
+                         optimizer='adam',
+                         metrics=['accuracy'])
 
     # Print summary
     linear_model.summary()
@@ -55,14 +57,14 @@ def make_neuralnet(train_data, train_labels, validation_data=None,
     return linear_model
 
 
-def make_gbdt():
-    """Make a gradient boosted decision tree using training data and"""
+def make_gbdt(train_data, train_labels):
+    """Make a gradient boosted decision tree in sklearn using training
+    data, using Claire's model as reference for creation parameters."""
 
-    
+    gbdt = GradientBoostingClassifier(
+        n_estimators=100,
+        max_depth=3,
+        random_state=23)
+    gbdt.fit(train_data, train_labels)
 
-
-def test_model(model, test_data, test_labels):
-    """Test a model's performance on a test dataset."""
-
-    return model.evaluate(test_data, test_labels)
-
+    return gbdt

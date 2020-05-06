@@ -22,6 +22,29 @@ def ntuples_to_ntuple_dict(event_sets, properties_by_track_type):
         event_sets)))
 
 
+def ntuple_dict_length(ntuple_dict):
+    """Returns a dictionary from track types to the number of tracks of
+    that type."""
+
+    return dict(map(lambda track_type, track_prop_dict:
+        (track_type, track_prop_dict_length(track_prop_dict)),
+        ntuple_dict.keys(), ntuple_dict.values()))
+
+
+def track_prop_dict_length(track_prop_dict):
+    """Returns the number of tracks in a track properties dictionary.
+    Raises an exception if the value lists in the input dictionary are
+    not all of the same length."""
+
+    # A fancy way of checking if all value lists are the same length
+    val_list_lengths = set(map(len, track_prop_dict.values()))
+    if len(val_list_lengths) > 1:
+        raise ValueError("Invalid track prop dictionary:"
+                "value lists are of different sizes")
+
+    return next(iter(val_list_lengths)) 
+
+
 def add_ntuple_dicts(ntuple_dicts):
     """Adds together multiple ntuple dicts of with the same track types and
     track type properties. Raises an exception if the dicts do not have this
