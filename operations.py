@@ -227,7 +227,8 @@ def cut_ntuple(ntuple_dict, cut_dicts={}):
                                          ntuple_dict[track_type], cut_dict)),
                                      cut_dicts.keys(), cut_dicts.values())))
 
-    # Combine trk and matchtp, tp and matchtrk indices to remove (respectively), sorting and removing duplicates
+    # Combine trk and matchtp, tp and matchtrk indices
+    # Sort and remove duplicates
     trk_matchtp_indices_to_cut = sorted(
         list(dict.fromkeys(cut_indices_dict["trk"] + cut_indices_dict["matchtp"])))
     tp_matchtrk_indices_to_cut = sorted(
@@ -343,9 +344,11 @@ def get_proportion_selected(tracks_property, selector, norm=True):
     """
 
     if len(tracks_property) == 0:
-        print("Cannot calculate proportion meeting condition in zero-length quantity. Returning zero.")
+        print("Cannot calculate proportion meeting condition in zero-length"
+                "quantity. Returning zero.")
         return 0
 
     num_tracks_meeting_cond = sum(map(selector, tracks_property))
-    return float(num_tracks_meeting_cond) / len(tracks_property) if norm else num_tracks_meeting_cond
+    return float(num_tracks_meeting_cond) / len(tracks_property) if norm \
+            else num_tracks_meeting_cond
 
