@@ -1,16 +1,33 @@
-import tensorflow as tf
-import tensorflow.keras as keras
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import Dense
 
-def make_neuralnet(train_features, train_truth, validation_data=None, 
+
+def make_neuralnet(train_data, train_labels, validation_data=None, 
         hidden_layers=[], epochs=10):
-    """TODO"""
+    """Makes a neural net in tensorflow using training data and optional
+    validation data.
 
-    num_data = train_features.shape[0]
-    feature_dim = train_features.shape[1]
+    Args:
+        train_data:  a tf tensor, indexed by track on the 0th axis and
+            track property on the 1st axis, containing a track property
+            value
+        train_labels:  a tf tensor indexed by track, containing the trackset's
+            labeled data
+        validation_data:  a 2-tuple contianing a data/label pair in the
+            same form as train_data and train_labels for use in validation
+        hidden_layers:  a list of hidden layer sizes. By default, there are
+            no hidden layers, just the input and the output, which are
+            predetermined by data dimension
+        epochs:  how many time the neural net is trained on data
 
-    layer_sizes = iter([feature_dim] + hidden_layers + [2])  #TODO generalize past two
+    Returns:
+        A trains tensorflow neural net.
+    """
+
+    num_data = train_data.shape[0]
+    data_dim = train_data.shape[1]
+
+    layer_sizes = iter([data_dim] + hidden_layers + [2])  #TODO generalize past two
 
     # Build the scaffolding
     linear_model = Sequential()
@@ -29,7 +46,7 @@ def make_neuralnet(train_features, train_truth, validation_data=None,
 
     # Train loop
     steps_per_epoch = num_data / epochs
-    linear_model.fit(train_features, train_truth,
+    linear_model.fit(train_data, train_labels,
                      validation_data=validation_data,
                      steps_per_epoch=steps_per_epoch,
                      epochs=epochs,
@@ -38,8 +55,14 @@ def make_neuralnet(train_features, train_truth, validation_data=None,
     return linear_model
 
 
-def test_model(model, test_features, test_truth):
+def make_gbdt():
+    """Make a gradient boosted decision tree using training data and"""
+
+    
+
+
+def test_model(model, test_data, test_labels):
     """Test a model's performance on a test dataset."""
 
-    return model.evaluate(test_features, test_truth)
+    return model.evaluate(test_data, test_labels)
 

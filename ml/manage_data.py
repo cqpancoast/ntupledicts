@@ -3,7 +3,8 @@ import tensorflow as tf
 
 def make_datasets_from_track_prop_dict(track_prop_dict, 
         label_property="genuine", split_dist=[.7, .2, .1],
-        name="dataset", outputdir="saveddata", seed=None):
+        name="dataset", outputdir="saveddata", shuffle=True,
+        seed=None):
     """Creates train, eval, and test datasets each composed of a data
     array and a label array.
 
@@ -20,19 +21,20 @@ def make_datasets_from_track_prop_dict(track_prop_dict,
         seed:  a seed to use in array shuffling for reproducability
 
     Returns:
-        Four two-tuples, each containing the data and label components
-        of the property names, the training set, the eval set, and the test
-        set, all stored as tensorflow tensors
+        A list of two-tuples, beginning with the data and label property names
+        and then one two-tuple for each dataset created
     """
 
-    data_properties = list(track_prop_dict.keys()).remove(label_property)
+    data_properties = list(track_prop_dict.keys())
+    data_properties.remove(label_property)
     label_array = tf.constant(track_prop_dict.pop(label_property)) #TODO labels of more than one element?
     data_array = tf.transpose(tf.constant(list(track_prop_dict.values())))
 
-    # Shuffle the arrays in a reproducable manner
-    tf.random.set_seed(seed)
-    tf.random.shuffle(data_array)
-    tf.random.shuffle(label_array)
+    if shuffle:
+        # Shuffle the arrays in a reproducable manner
+        tf.random.set_seed(seed)
+        tf.random.shuffle(data_array)
+        tf.random.shuffle(label_array)
 
     def get_dataset_split_sizes(split_dist, num_tracks):
         """Returns the sizes of the data."""
@@ -62,10 +64,11 @@ def make_datasets_from_track_prop_dict(track_prop_dict,
 def make_track_prop_dict_from_dataset(data, labels, 
         data_properties, label_property):
     """Turns tensorflow data back into a track properties dictionary. For
-    example, one might do this to recut the data. Note that, if the dataset
-    was created with shuffling, this will not restore the order of the
-    original track properties dictionary.
-    
+    example, one might do this to recut the data. Note that this recasting
+    will not preserve the order (if the dataset was shuffled upon creation)
+    or the data type (everything has been cast to a float) of an original
+    reference track properties dictionary.
+
     Args:
         data:  a tensorflow tensor of data indexed by tracks and then by
             track properties
@@ -82,10 +85,12 @@ def make_track_prop_dict_from_dataset(data, labels,
         to lists of property values contained in data and labels
     """
 
-    tpd_keys = data_properties.append(label_property)
-    tpd_vals = tf.unstack(tf.concat([data, labels], axis=0))
+    tpd_keys = data_properties + [label_property]
+    tpd_value_lists = tf.transpose(tf.unstack(tf.concat(
+        [data, tf.stack([tf.cast(labels, tf.float32)], axis=1)],
+        axis=1)))
 
     return dict(map(lambda tpd_key, tpd_val_list:
-        (tpd_key, list(tf.eval(tpd_val_list))),
-        tpd_keys, tpd_vals))
+        (tpd_key, list(tpd_val_list.numpy())),
+        tpd_keys, tpd_value_lists))
 
