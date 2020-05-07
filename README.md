@@ -31,6 +31,7 @@ For example, a simple ntuple dict might look like this:
 ```
 
 The ntuple dict's values here (e.g., `{"pt": [1, 2, 3], ...}`) are track property dicts.
+In the code, the lists of track property values are called value lists.
 
 ### Creating an ntuple dictionary
 
