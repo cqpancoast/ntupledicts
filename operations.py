@@ -22,29 +22,6 @@ def ntuples_to_ntuple_dict(event_sets, properties_by_track_type):
         event_sets)))
 
 
-def ntuple_dict_length(ntuple_dict):
-    """Returns a dictionary from track types to the number of tracks of
-    that type."""
-
-    return dict(map(lambda track_type, track_prop_dict:
-        (track_type, track_prop_dict_length(track_prop_dict)),
-        ntuple_dict.keys(), ntuple_dict.values()))
-
-
-def track_prop_dict_length(track_prop_dict):
-    """Returns the number of tracks in a track properties dictionary.
-    Raises an exception if the value lists in the input dictionary are
-    not all of the same length."""
-
-    # A fancy way of checking if all value lists are the same length
-    val_list_lengths = set(map(len, track_prop_dict.values()))
-    if len(val_list_lengths) > 1:
-        raise ValueError("Invalid track prop dictionary:"
-                "value lists are of different sizes")
-
-    return next(iter(val_list_lengths)) 
-
-
 def add_ntuple_dicts(ntuple_dicts):
     """Adds together multiple ntuple dicts of with the same track types and
     track type properties. Raises an exception if the dicts do not have this
@@ -133,6 +110,29 @@ def ntuple_to_track_prop_dict(event_set, track_type, properties):
         properties))
 
 
+def ntuple_dict_length(ntuple_dict):
+    """Returns a dictionary from track types to the number of tracks of
+    that type."""
+
+    return dict(map(lambda track_type, track_prop_dict:
+        (track_type, track_prop_dict_length(track_prop_dict)),
+        ntuple_dict.keys(), ntuple_dict.values()))
+
+
+def track_prop_dict_length(track_prop_dict):
+    """Returns the number of tracks in a track properties dictionary.
+    Raises an exception if the value lists in the input dictionary are
+    not all of the same length."""
+
+    # A fancy way of checking if all value lists are the same length
+    val_list_lengths = set(map(len, track_prop_dict.values()))
+    if len(val_list_lengths) > 1:
+        raise ValueError("Invalid track prop dictionary:"
+                "value lists are of different sizes")
+
+    return next(iter(val_list_lengths)) 
+
+
 def reduce_ntuple_dict(ntuple_dict, track_limit=10):
     """Reduces an ntuple dictionary to a number of tracks. If number of tracks
     in the ntuple is less than the track limit specified, print all tracks.
@@ -205,7 +205,7 @@ def select(*selector_key):
                 .format(selector_key))
 
 
-def cut_ntuple(ntuple_dict, cut_dicts={}):
+def cut_ntuple(ntuple_dict, nd_selector={}):
     """Cuts an ntuple dictionary by cutting each track type according to a
     selector dictionary, cutting those tracks not selected. Tracks are cut
     "symmetrically" across corresponding groups, meaning that any cuts applied
@@ -213,8 +213,7 @@ def cut_ntuple(ntuple_dict, cut_dicts={}):
 
     Args:
         ntuple_dict:  an ntuple dictionary
-        cut_dicts:  a dictionary from track types to dictionaries from track
-            properties to selectors
+        nd_selector:  a selector for an ntuple dict
 
     Returns:
         A cut ntuple dictionary
@@ -225,7 +224,7 @@ def cut_ntuple(ntuple_dict, cut_dicts={}):
     cut_indices_dict.update(dict(map(lambda track_type, cut_dict:
                                      (track_type, select_indices(
                                          ntuple_dict[track_type], cut_dict)),
-                                     cut_dicts.keys(), cut_dicts.values())))
+                                     nd_selector.keys(), nd_selector.values())))
 
     # Combine trk and matchtp, tp and matchtrk indices
     # Sort and remove duplicates
@@ -246,23 +245,23 @@ def cut_ntuple(ntuple_dict, cut_dicts={}):
     return cut_ntuple_dict
 
 
-def cut_trackset(track_prop_dict, cut_dict={}):
+def cut_trackset(track_prop_dict, tpd_selector={}):
     """Cuts an track properties dictionary by cutting each track type according
     to a cut dictionary.
 
     Args:
         track_prop_dict:  a tracks properties dictionary
-        cut_dicts:  a from track properties to cuts
+        tpd_selector:  a selector for a tracks properties dictionary
 
     Returns:
         A cut tracks properties dictionary
     """
 
     return cut_trackset_by_indices(track_prop_dict,
-            select_indices(track_prop_dict, cut_dict))
+            select_indices(track_prop_dict, tpd_selector))
 
 
-def select_indices(track_prop_dict, selector_dict, invert=True):
+def select_indices(track_prop_dict, tpd_selector, invert=True):
     """Selects indices from a tracks properties dictionary that meet the
     conditions of the selector dictionary. If a property is in the selector
     dict but not in the tracks properties dict, the program won't raise an
@@ -270,7 +269,7 @@ def select_indices(track_prop_dict, selector_dict, invert=True):
 
     Args:
         track_prop_dict:  a tracks properties dictionary
-        selector_dict:  a dictionary from track property names to selectors
+        tpd_selector:  a dictionary from track property names to selectors
         inverse:  return all indices NOT selected. Default is True as this
             jibes with how this function is mainly used: track cuts
 
@@ -279,10 +278,10 @@ def select_indices(track_prop_dict, selector_dict, invert=True):
     """
 
     # Determine which selection conditions will be applied
-    for property in selector_dict.keys():
+    for property in tpd_selector.keys():
         if property not in track_prop_dict.keys():
             print(property + " not in tracks properties; will not select")
-            selector_dict.pop(property)
+            tpd_selector.pop(property)
 
     def index_meets_selection(track_index):
         """Determine if the track at this index is selected by the selector
@@ -290,7 +289,7 @@ def select_indices(track_prop_dict, selector_dict, invert=True):
 
         return all(list(map(lambda track_property, property_selector:
             property_selector(track_prop_dict[track_property][track_index]),
-            selector_dict.keys(), selector_dict.values())))
+            tpd_selector.keys(), tpd_selector.values())))
 
     track_indices = range(len(next(iter(track_prop_dict.values()))))
     return list(filter(lambda track_index:
@@ -306,17 +305,17 @@ def cut_trackset_by_indices(track_prop_dict, indices_to_cut):
     have to be sorted by size.
 
     Args:
-            track_prop_dict:  a tracks properties dictionary
-            indices_to_cut:  a collection of indices to cut. Repeats are
-                    tolerated, but out-of-range indices will result in an
-                    exception.
+        track_prop_dict:  a tracks properties dictionary
+        indices_to_cut:  a collection of indices to cut. Repeats are
+                tolerated, but out-of-range indices will result in an
+                exception.
 
     Returns:
-            The same tracks properties dictionary with the given indices
-            on its value lists removed.
+        The same tracks properties dictionary with the given indices
+        on its value lists removed.
     """
 
-    # Copy, then delete all tracks (going backwards so as not to affect indices)
+    # Copy, then delete all tracks at indices (backwards)
     cut_track_prop_dict = deepcopy(track_prop_dict)
     for track_to_cut in reversed(sorted(indices_to_cut)):
         for property in cut_track_prop_dict.keys():
