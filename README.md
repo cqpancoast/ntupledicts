@@ -160,9 +160,7 @@ However, you are by no means restricted to using these functions to create your 
 
 `ntupledicts.ml.plot` is "under construction" right now — this is envisioned 
 as a set of functions that evaluate and compare the performance of networks
-in some basic ways. Ideally, these would play nicely with the results of testing
-networks that will be in the also-under-construction subpackage
-`ntupledicts.ml.test`.
+in some basic ways.
 
 
 ## #TODO: Potential improvements

@@ -7,7 +7,6 @@ from .. import operations as ndops
 from ..operations import select as sel
 
 
-# FIXME generalize these to single function along w/ true/false negative?
 def true_positive_rate(labels, pred_labels,
         true_cond=sel(0), false_cond=sel(1)):
     """For a binary classifier label, returns the proportion of "true"
@@ -42,7 +41,43 @@ def false_positive_rate(labels, pred_labels,
             pred_labels_should_be_false, true_cond)
 
 
-def create_roc(test_data, test_labels, models, model_names,
+def apply_threshhold(pred_labels, threshhold):
+    """Sends every prediction in the list below the threshhold
+    (exclusive) to zero and everything above it (inclusive) to one."""
+
+    return list(map(lambda pred: 1 if pred >= threshhold else 0, pred_labels))
+
+
+def predict_labels(model, data, threshhold=None):
+    """Run the model on each element of a dataset and produce a list of
+    probabilistic predictions (note: not logits). Assumes a binary
+    classifier. If a threshhold is provided, transforms the list into
+    zeroes and ones accordingly.
+
+    Args:
+        model: a tensorflow or sklearn model capable of prediction
+        data: a dataset for the model to run on
+        threshhold: a number that will transform probabilities into
+            concrete zero/one predictions. This should be between zero
+            and one, but other values are allowed
+
+    Returns:
+        A list of probabilistic predictions
+    """
+
+    # Different models predict in different ways
+    if "keras" in str(type(model)):
+        pred_labels_full = tf.keras.Sequential(
+                [model, tf.keras.layers.Softmax()]).predict(data)
+        pred_labels = list(map(lambda l: l[0], pred_labels_full))
+    else:
+        pred_labels = np.sum(model.predict_proba(data), axis=1)
+
+    return pred_labels if threshhold is None \
+            else apply_threshhold(pred_labels, threshhold)
+
+
+def create_roc(data, labels, models, model_names,
         cuts=[], data_properties=None, label_property=None):
     """Create ROC curves through true positive rate / false positive
     rate space for different models by changing the cut on model-
@@ -51,41 +86,37 @@ def create_roc(test_data, test_labels, models, model_names,
     classifier such as trk_genuine.
 
     Args:
-        test_data: a tensorflow tensor of data
-        test_labels: a tensorflow tensor of label data
+        data: a tensorflow tensor of data
+        labels: a tensorflow tensor of label data
         models: a list of models with predictive capabilites
         model_names: the names of the models for the plot legend
         cuts: an optional list of selector dictionaries to apply to
-            the test data to predict the binary variable in question
+            the data to predict the binary variable in question
         data_properties: the properties of each track in the data set.
             Used to cut if cuts is true
         label_property: the property of the data label that is being
             predicted. Used to cut if cuts is true
     """
 
-    # Create roc curves from models' predictions on test data and labels
+    # Create roc curves from models' predictions on data and labels
     for model, model_name in zip(models, model_names):
-        if "keras" in str(type(model)):
-            pred_test_labels_full = tf.keras.Sequential(
-                    [model, tf.keras.layers.Softmax()]).predict(test_data)
-            pred_test_labels = list(map(lambda l: l[0], pred_test_labels_full))
-        else:
-            pred_test_labels = np.sum(model.predict_proba(test_data), axis=1)
-        fpr, tpr, _ = roc_curve(test_labels, pred_test_labels)
-        auc = roc_auc_score(test_labels, pred_test_labels)
-        plt.plot(fpr, tpr, label=model_name+' ('+str(round(auc,3))+')',
+        pred_labels = predict_labels(model, data)
+        fpr, tpr, _ = roc_curve(labels, pred_labels)
+        auc = roc_auc_score(labels, pred_labels)
+        auc_string = ' ('+str(round(auc,3))+')'
+        plt.plot(fpr, tpr, label=model_name+auc_string,
                 linewidth=2)
 
     # Plot against sets of cuts, if any are given
     for cut in cuts:
         track_prop_dict = data.make_track_prop_dict_from_dataset(
-               test_data, test_labels, data_properties, label_property)
+               data, labels, data_properties, label_property)
         cut_indices = ndops.select_indices(track_prop_dict, cut)
         cut_pred_labels = list(map(
             lambda index: 1 if index in cut_indices else 0,
            range(ndops.track_prop_dict_length(track_prop_dict))))
-        fpr_cut = false_positive_rate(test_labels, cut_pred_labels) 
-        tpr_cut = true_positive_rate(test_labels, cut_pred_labels)
+        fpr_cut = false_positive_rate(labels, cut_pred_labels) 
+        tpr_cut = true_positive_rate(labels, cut_pred_labels)
         plt.scatter(fpr_cut, tpr_cut,
                 s=80, marker='*', label='cuts', color='red')
         
@@ -96,5 +127,4 @@ def create_roc(test_data, test_labels, models, model_names,
     #plt.ylim(.9, 1)
     plt.legend(loc='best',fontsize=14)
     plt.savefig("roc_curve.pdf")
-
 
