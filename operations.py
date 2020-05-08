@@ -42,7 +42,8 @@ def add_ntuple_dicts(ntuple_dicts):
 
     return dict(map(lambda track_type:
         (track_type, add_track_prop_dicts(
-            list(map(lambda ntuple: ntuple[track_type], ntuple_dicts)))),
+            list(map(lambda ntuple_dict: ntuple_dict[track_type],
+                ntuple_dicts)))),
         track_types))
 
 
