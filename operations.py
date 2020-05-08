@@ -2,6 +2,7 @@ from random import shuffle
 from random import seed as set_seed
 from copy import deepcopy
 from functools import reduce
+from math import inf
 
 
 def ntuples_to_ntuple_dict(event_sets, properties_by_track_type):
@@ -422,8 +423,8 @@ def cut_trackset_by_indices(track_prop_dict, indices_to_cut):
     Args:
         track_prop_dict: a tracks properties dictionary
         indices_to_cut: a collection of indices to cut. Repeats are
-                tolerated, but out-of-range indices will result in an
-                exception.
+            tolerated, but out-of-range indices will result in an
+            exception.
 
     Returns:
         The same tracks properties dictionary with the given indices
@@ -445,16 +446,16 @@ def get_proportion_selected(tracks_property, selector, norm=True):
     Can also return the number of tracks meeting the condition.
 
     Args:
-            tracks_property: a list of values of a track property, such as
-                    trk_pt or tp_chi2rphi
-            property_condition: a property that these value can satisfy. For
-                    example, "lambda trk_eta: trk_eta <= 2.4".
-            norm: if True, divides the number of tracks meeting the condition
-                    by the total number of tracks. This is the default option.
+        tracks_property: a list of values of a track property, such as
+            trk_pt or tp_chi2rphi
+        selector: a property that these value can satisfy. For
+            example, "lambda trk_eta: trk_eta <= 2.4".
+        norm: if True, divides the number of tracks meeting the condition
+            by the total number of tracks. This is the default option.
 
     Returns:
-            Either the number or proportion of tracks meeting the condition,
-            depending on the value of norm.
+        Either the number or proportion of tracks meeting the condition,
+        depending on the value of norm.
     """
 
     if len(tracks_property) == 0:
@@ -465,4 +466,26 @@ def get_proportion_selected(tracks_property, selector, norm=True):
     num_tracks_meeting_cond = sum(map(selector, tracks_property))
     return float(num_tracks_meeting_cond) / len(tracks_property) if norm \
             else num_tracks_meeting_cond
+
+
+def eff_from_ntuple_dict(ntuple_dict, tp_selector_dict={}):
+    """Finds the efficieny of an ntuple dict. Restrictions can be made
+    on the tracking particles by performing a cut on the ntuple. Note
+    that the ntuple must contain pt.
+
+    Args:
+        ntuple_dict: an ntuple dictionary
+        tp_selector_dict: a dictionary from tp properties 
+            ("pt", "eta", etc.) to conditions (lambda pt: pt < 2, etc.)
+
+    Returns:
+        The efficiency of the tracking algorithm run on the given ntuple
+    """
+
+    # Cutting on tracking particles also cuts the corresponding matchtracks
+    cut_ntuple_dict = ndops.cut_ntuple(ntuple_dict, {"tp": tp_selector_dict})
+    tps_nmatch = cut_ntuple_dict["tp"]["nmatch"]
+
+    # Now, count how many tp's have an nmatch value greater than zero
+    return get_proportion_selected(tps_nmatch, sel(1, inf))
 
