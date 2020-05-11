@@ -3,6 +3,9 @@
 A package for dealing with CMS TrackTrigger ntuples as Python dictionaries.
 Designed with machine learning studies in mind.
 
+Info on the CMS TrackTrigger can be found [here](https://arxiv.org/abs/1705.04321).
+Info on CMS as a whole can be found [here](https://home.cern/science/experiments/cms).
+
 
 ## What you'll need
 
@@ -169,10 +172,7 @@ in some basic ways.
 
 - Greater cut sophistication: selectors that can operate on more than one track
 property at a time
-- Saving models and datasets for future use instead of just returning them
-- `reduce_ntuple_dict` should have an option to shuffle lists before cutting to
-ensure randomly selected tracks
-- Clean up generic plotting library
+- Saving models and datasets for future use
 
 ### ML
 
