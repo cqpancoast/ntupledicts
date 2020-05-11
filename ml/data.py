@@ -5,24 +5,27 @@ def make_datasets_from_track_prop_dict(track_prop_dict,
         label_property="genuine", split_dist=[.7, .2, .1],
         name="dataset", outputdir="saveddata", shuffle=True,
         seed=None):
-    """Creates train, eval, and test datasets each composed of a data
-    array and a label array.
-
+    """Makes one or more datasets from the given track properties dict,
+    given a label property that tells it which track property to use as
+    the label and a split distribution that tells it how many datasets
+    to make and their relative sizes.
+    
     Args:
-        track_prop_dict:  a track properties dictionary. Is not altered by
+        track_prop_dict: a track properties dictionary. Not altered by
             this function
-        label_property:  the field of the track properties dictionary that
-            a model will predict. This will typically be "genuine" or "fake"
-        split_dist:  tracks will be organized into datasets with these
-            relative sizes
-        name:  the name to associate with these datasets so they can be
+        label_property: the field of the track properties dictionary
+            that a model will predict. This will typically be "genuine"
+            or "fake"
+        split_dist: tracks will be organized into datasets with relative
+            sizes. [.7, .3] and [700, 300] produce identical output
+        name: the name to associate with these datasets so they can be
             found and used again
-        outputdir:  where to put these datasets
-        seed:  a seed to use in array shuffling for reproducability
+        outputdir: where to put these datasets
+        seed: a seed to use in array shuffling for reproducability
 
     Returns:
-        A list of two-tuples, beginning with the data and label property names
-        and then one two-tuple for each dataset created
+        A list of two-tuples, beginning with the data and label property
+        names and then one two-tuple for each dataset created
     """
 
     data_properties = list(track_prop_dict.keys())
@@ -37,7 +40,9 @@ def make_datasets_from_track_prop_dict(track_prop_dict,
         label_array = tf.random.shuffle(label_array)
 
     def get_dataset_split_sizes(split_dist, num_tracks):
-        """Returns the sizes of the data."""
+        """Returns the sizes of data by normalizing the provided split
+        distribution and mutliplying by the number of tracks in such
+        a way that the resulting sizes add up to the original tracks."""
 
         split_dist_total = sum(split_dist)
         dataset_split_sizes = list(map(lambda split_val:
@@ -63,26 +68,26 @@ def make_datasets_from_track_prop_dict(track_prop_dict,
 
 def make_track_prop_dict_from_dataset(data, labels, 
         data_properties, label_property):
-    """Turns tensorflow data back into a track properties dictionary. For
-    example, one might do this to recut the data. Note that this recasting
-    will not preserve the order (if the dataset was shuffled upon creation)
-    or the data type (everything has been cast to a float) of an original
-    reference track properties dictionary.
+    """Turns tensorflow data back into a track properties dictionary.
+    For example, one might do this to recut the data. Note that this
+    recasting will not preserve the order (if the dataset was shuffled
+    upon creation) or the data type (everything has been cast to a
+    float) of an original reference track properties dictionary.
 
     Args:
-        data:  a tensorflow tensor of data indexed by tracks and then by
+        data: a tensorflow tensor of data indexed by tracks and then by
             track properties
-        labels:  a tensorflow tensor of data labels indexed by tracks and
+        labels: a tensorflow tensor of data labels indexed by tracks and
             then by label component
-        data_properties:  the names of the track properties contained in
+        data_properties: the names of the track properties contained in
             the data array. Should be the same dimension as the track
             properties axis in data
-        label_property:  the track property that labels the data. Currently,
-            only one label is supported
+        label_property: the track property that labels the data.
+            Currently, only one label is supported
 
     Returns:
-        A track properties dictionary from data_properties + label_property
-        to lists of property values contained in data and labels
+        A track properties dict from data_properties + label_property to
+        lists of property values contained in data and labels
     """
 
     tpd_keys = data_properties + [label_property]

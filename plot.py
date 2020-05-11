@@ -73,7 +73,7 @@ def plot_roc_curve_from_cut_list(ntuple_dict_in,
     return ax
 
 
-#TODO this function is not just deprecated; it's CONDEMNED.
+#FIXME I'm not broken I'm just horrible and ugly.
 def proportion_foreach_bin(trks_property, trks_property_wrt, property_condition,
         num_bins=30, ax=plt.figure().add_subplot(111)):
     """wrt meaning "with respect to" - bin tracks by property, and then see how another

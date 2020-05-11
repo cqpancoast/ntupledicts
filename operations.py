@@ -440,13 +440,13 @@ def cut_trackset_by_indices(track_prop_dict, indices_to_cut):
     return cut_track_prop_dict
 
 
-def get_proportion_selected(tracks_property, selector, norm=True):
+def get_proportion_selected(val_list, selector, norm=True):
     """Find the proportion of tracks selected with the given selector.
     If there are no tracks in the tracks property value list, returns zero.
     Can also return the number of tracks meeting the condition.
 
     Args:
-        tracks_property: a list of values of a track property, such as
+        val_list: a list of values of a track property, such as
             trk_pt or tp_chi2rphi
         selector: a property that these value can satisfy. For
             example, "lambda trk_eta: trk_eta <= 2.4".
@@ -458,13 +458,13 @@ def get_proportion_selected(tracks_property, selector, norm=True):
         depending on the value of norm.
     """
 
-    if len(tracks_property) == 0:
+    if len(val_list) == 0:
         print("Cannot calculate proportion meeting condition in zero-length"
                 "quantity. Returning zero.")
         return 0
 
-    num_tracks_meeting_cond = sum(map(selector, tracks_property))
-    return float(num_tracks_meeting_cond) / len(tracks_property) if norm \
+    num_tracks_meeting_cond = sum(map(selector, val_list))
+    return float(num_tracks_meeting_cond) / len(val_list) if norm \
             else num_tracks_meeting_cond
 
 
