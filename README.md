@@ -39,7 +39,8 @@ In the code, the lists of track property values are called value lists.
 **Note**: I choose to define track property dicts such that even value lists that are not
 drawn directly from the input ntuples are valid. For example, if you wanted a machine
 learning model's prediction to be a track property value list, that would be perfectly
-valid.
+valid, *as long as the predictions are indexed by the same tracks that made the track
+property dict in the first place*.
 
 ### Creating an ntuple dictionary
 
