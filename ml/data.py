@@ -2,7 +2,7 @@ import tensorflow as tf
 
 
 def make_datasets_from_track_prop_dict(track_prop_dict,
-        label_property="genuine", data_properties=None, 
+        data_properties=None, label_property="genuine",
         split_dist=[.7, .2, .1]):
     """Makes one or more datasets from the given track properties dict,
     given a label property that tells it which track property to use as
@@ -13,11 +13,11 @@ def make_datasets_from_track_prop_dict(track_prop_dict,
     Args:
         track_prop_dict: a track properties dictionary. Not altered by
             this function
+        data_properties: the properties to pull from track_prop_dict to
+            put into the dataset. If none, pulls all data into dataset
         label_property: the field of the track properties dictionary
             that a model will predict. This will typically be "genuine"
             or "fake"
-        data_properties: the properties to pull from track_prop_dict to
-            put into the dataset. If none, pulls all data into dataset
         split_dist: tracks will be organized into datasets with relative
             sizes. [.7, .3] and [700, 300] produce identical output
 

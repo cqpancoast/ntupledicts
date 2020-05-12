@@ -138,9 +138,9 @@ def predict_labels(model, data):
         #pred_prob_labels_full = Sequential(
         #        [model, Softmax()]).predict(data)
         pred_prob_labels_full = model(data).numpy()
-        pred_prob_labels = list(map(lambda l: l[0], pred_prob_labels_full))
     else:
-        pred_prob_labels = npsum(model.predict_proba(data), axis=1)
+        pred_prob_labels_full = model.predict_proba(data)
+    pred_prob_labels = list(map(lambda l: l[0], pred_prob_labels_full))
 
     return list(pred_prob_labels)
 
