@@ -36,6 +36,11 @@ For example, a simple ntuple dict might look like this:
 The ntuple dict's values here (e.g., `{"pt": [1, 2, 3], ...}`) are track property dicts.
 In the code, the lists of track property values are called value lists.
 
+**Note**: I choose to define track property dicts such that even value lists that are not
+drawn directly from the input ntuples are valid. For example, if you wanted a machine
+learning model's prediction to be a track property value list, that would be perfectly
+valid.
+
 ### Creating an ntuple dictionary
 
 Here's a sample of code where I make an ntuple dict from root ntuples:
@@ -178,6 +183,7 @@ property at a time
 
 - More model configurability from the model creation wrapper functions — it's
 hard to know what's too much configurability and what isn't enough
-- Support for more than one track property to contribute to a label
+- Support for more than one track property to contribute to a label, if desired
+  - "Composite labels"?
 - Obviously, support for as many models as possible
 

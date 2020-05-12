@@ -507,7 +507,7 @@ def eff_from_track_prop_dict(track_prop_dict_tp, selector_dict={}):
             select(1, inf))
 
 
-def make_bins(bin_specifier, binned_property):
+def make_bins(bin_specifier, binning_values):
     """Takes in a bin specifier, which is either an integer number of
     bins, a tuple of the form (lower_bound, upper_bound, num_bins) or
     a list of bins, with the last element being the upper bound of the
@@ -525,7 +525,7 @@ def make_bins(bin_specifier, binned_property):
         bin_specifier: either an int for the number of bins, a 3-tuple
             of the form (low_bound, high_bound, num_bins), or a list of
             numbers
-        binned_propety: a list of values forming the basis for the bins
+        binning_values: a list of values forming the basis for the bins
 
     Returns:
         A list of bin edges, of length one greater than the number of

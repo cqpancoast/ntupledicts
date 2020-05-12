@@ -5,17 +5,15 @@ from . import operations as ndops
 from .operations import select as sel
 
 
-#FIXME complicated refactoring required
-def plot_roc_curve_from_cut_list(ntuple_dict_in,
-        cut_property, cuts, cuts_constricting=True,
-        group_name="", ax=plt.figure().add_subplot(111), color='blue'):
+def plot_roc_curve_from_cut_list(ntuple_dict, cut_property, cuts,
+        cuts_constricting=True, ax=plt.figure().add_subplot(111)):
     """Adjusts the cut on a certain variable in an event set and plots
     the change in tracking efficiency and fake rate.
 
     Args:
-        ntuple_dict_in: a dict from track types to dicts from track 
-            properties to lists of values. The input value is unaltered
-            by this function
+        ntuple_dict: an ntuple dict that contains trk with at least
+            genuine and the cut property, matchtrk with at least the
+            cut property, and tp with at least nmatch
         cut_property: the variable to change cuts on
         cuts: a list of length 2 lists containing lower and upper cut 
             bounds (inclusive). These are used rather than selectors so
@@ -23,40 +21,32 @@ def plot_roc_curve_from_cut_list(ntuple_dict_in,
         cuts_constricting: if the cuts are strictly in increasing order of 
             strictness, the same list can be preserved, decreasing runtime.
             True by default
-        group_name: if you are plotting this data with other data, this
-            will be the legend label
-        ax: an axes object to overlay this data onto a previous plot
-        color: the color to plot the curve in
+        ax: an axes object to be used to plot this graph
 
     Returns:
-        The axes object used to plot this graph, for use in overlaying
+        The axes object used to plot this graph
     """
-
-    # We don't want to alter our original ntuple_dict
-    ntuple_dict = deepcopy(ntuple_dict_in)
 
     # Build up cuts plot info, which is what will be plotted
     cuts_plot_info = {"cut": [], "eff": [], "fake_rate": []}
-    trackset_to_cut = {}
+    tpds_to_cut = {}
     cut_ntuple_dict = ntuple_dict
     for cut in cuts:
-        trackset_to_cut["trk"] = cut_tracks_properties\
-                if cuts_constricting else ntuple_dict["trk"]
-        trackset_to_cut["matchtrk"] = cut_matchtracks_properties\
-                if cuts_constricting else ntuple_dict["matchtrk"]
-        cut_tracks_properties = ndops.cut_trackset(
-            trackset_to_cut["trk"], {cut_property: sel(*cut)})
-        cut_matchtracks_properties = ndops.cut_trackset(
-            trackset_to_cut["matchtrk"], {cut_property: sel(*cut)})
+        # If cuts are constricting, use cut ntuple dict from previous iteration
+        ntuple_dict_to_cut = cut_ntuple_dict if cuts_constricting\
+                else ntuple_dict
+        tpd_selector = {cut_property: sel(*cut)}
+        cut_ntuple_dict = ndops.cut_ntuple(ntuple_dict_to_cut,
+                {"trk": tpd_selector, "matchtrk": tpd_selector})
         cuts_plot_info["cut"].append(cut[1])  # only get upper bound of cut
         cuts_plot_info["eff"].append(ndops.eff_from_ntuple_dict(
-            cut_matchtracks_properties["pt"], ntuple_dict["tp"]["pt"]))
+            cut_ntuple_dict["tp"]["pt"]))
         cuts_plot_info["fake_rate"].append(ndops.get_proportion_selected(
-            cut_tracks_properties["genuine"], lambda gen_track: gen_track == 0))
+            cut_ntuple_dict["trk"]["genuine"], sel(0)))
 
     # Now plot!
     ax.plot(cuts_plot_info["fake_rate"], cuts_plot_info["eff"],
-            "b.", label=group_name, color=color)
+            "b.", label=group_name)
 
     ax.set_xlabel("Track fake rate")
     ax.set_ylabel("Tracking efficiency")
@@ -66,8 +56,6 @@ def plot_roc_curve_from_cut_list(ntuple_dict_in,
             cuts_plot_info["eff"],
             cuts_plot_info["cut"]):
         ax.annotate(str(cut), ax=(fake_rate, eff))
-    ax.set_title("Fake rate and efficiency for changing " +
-                 cut_property + " cuts " + group_name)
 
     return ax
 
