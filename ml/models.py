@@ -4,32 +4,34 @@ from sklearn.ensemble import GradientBoostingClassifier
 
 
 def make_neuralnet(train_data, train_labels, validation_data=None,
-                   hidden_layers=[], epochs=10):
+                   hidden_layers=[], epochs=10, classifier_order=2):
     """Makes a neural net in tensorflow using training data and optional
     validation data.
 
     Args:
-        train_data:  a tf tensor, indexed by track on the 0th axis and
+        train_data: a tf tensor, indexed by track on the 0th axis and
             track property on the 1st axis, containing a track property
             value
-        train_labels:  a tf tensor indexed by track, containing the
+        train_labels: a tf tensor indexed by track, containing the
             trackset's labeled data
-        validation_data:  a 2-tuple contianing a data/label pair in the
+        validation_data: a 2-tuple contianing a data/label pair in the
             same form as train_data and train_labels for use in validation
-        hidden_layers:  a list of hidden layer sizes. By default, there are
+        hidden_layers: a list of hidden layer sizes. By default, there are
             no hidden layers, just the input and the output, which are
             predetermined by data dimension
-        epochs:  how many time the neural net is trained on data
+        epochs: how many time the neural net is trained on data
+        classifier_order: order of categorization. This is set to 2 at
+            default, assuming a binary classifier
 
     Returns:
-        A trains tensorflow neural net.
+        A trained tensorflow neural net
     """
 
     num_data = train_data.shape[0]
     data_dim = train_data.shape[1]
 
     layer_sizes = iter(
-        [data_dim] + hidden_layers + [2])  # TODO generalize
+        [data_dim] + hidden_layers + [classifier_order])
 
     # Build the scaffolding
     linear_model = Sequential()
@@ -68,3 +70,4 @@ def make_gbdt(train_data, train_labels):
     gbdt.fit(train_data, train_labels)
 
     return gbdt
+

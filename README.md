@@ -170,6 +170,10 @@ However, you are by no means restricted to using these functions to create your 
 as a set of functions that evaluate and compare the performance of networks
 in some basic ways.
 
+All of the plotting functions in `ntupledicts.ml.plot` as of now are generalizations
+of ones developed by [Claire Savard](https://github.com/cgsavard), a grad student in
+high energy physics at CU Boulder.
+
 
 ## #TODO: Potential improvements
 

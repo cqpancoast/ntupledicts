@@ -61,7 +61,7 @@ def plot_roc_curve_from_cut_list(ntuple_dict, cut_property, cuts,
 
 
 def plot_measure_by_bin(track_prop_dict, bin_property, measure,
-        num_bins=30, ax=plt.figure().add_subplot(111)):
+        bins=30, ax=plt.figure().add_subplot(111)):
     """Bin a track properties dict by a value list of a corresponding
     property, compute some measure of the values in each bin, then plot.
 

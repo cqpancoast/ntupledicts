@@ -6,7 +6,7 @@ from math import inf
 from numpy import linspace
 
 
-def ntuples_to_ntuple_dict(event_sets, properties_by_track_type):
+def uproot_ntuples_to_ntuple_dict(event_sets, properties_by_track_type):
     """Takes in a collection of uproot ntuples and a dictionary from
     track types to desired properties to be included, returns an ntuple
     dictionary formed by selecting properties from the ntuples and then
@@ -22,7 +22,7 @@ def ntuples_to_ntuple_dict(event_sets, properties_by_track_type):
     """
 
     return add_ntuple_dicts(list(map(lambda event_set: 
-        ntuple_to_ntuple_dict(event_set, properties_by_track_type), 
+        uproot_ntuple_to_ntuple_dict(event_set, properties_by_track_type), 
         event_sets)))
 
 
@@ -39,7 +39,7 @@ def add_ntuple_dicts(ntuple_dicts):
         An ntuple dictionary with the lists of values of each ntuple dict in
         the input list concatenated
     """
-    
+
     track_types = iter(next(iter(ntuple_dicts)).keys())
 
     return dict(map(lambda track_type:
@@ -50,30 +50,32 @@ def add_ntuple_dicts(ntuple_dicts):
 
 
 def add_track_prop_dicts(track_prop_dicts):
-    """Adds together multiple track properties dicts of with the same properties.
-    Raises an exception if the dicts do not have this "sameness" property.
+    """Adds together multiple track properties dicts of with the same
+    properties.
 
     Args:
-        track properties_dicts: a list of track properties dicts with the
-        same properties
+        track properties_dicts: a list of track properties dicts with
+        the same properties
 
     Returns:
-        An track properties dictionary with the lists of values of each track
-        properties dictionary in the input list concatenated
+        An track properties dictionary with the lists of values of each
+        track properties dict in the input list concatenated
     """
 
     def add_two_track_prop_dicts(tp_so_far, tp_to_add):
-        """Adds two track properties dicts together as per rules in parent function.
-        Returns the sum."""
+        """Adds two track properties dicts together as per rules in
+        parent function. Returns the sum."""
 
         return dict(map(lambda property, vals_so_far, vals_to_add:
             (property, vals_so_far + vals_to_add),
-            tp_so_far.keys(), list(tp_so_far.values()), list(tp_to_add.values())))
+            tp_so_far.keys(),
+            list(tp_so_far.values()),
+            list(tp_to_add.values())))
 
     return reduce(add_two_track_prop_dicts, track_prop_dicts)
 
 
-def ntuple_to_ntuple_dict(event_set, properties_by_track_type):
+def uproot_ntuple_to_ntuple_dict(event_set, properties_by_track_type):
     """Turns an uproot ntuple into an ntuple dictionary.
 
     Args:
@@ -86,11 +88,12 @@ def ntuple_to_ntuple_dict(event_set, properties_by_track_type):
     """
 
     return dict(map(lambda track_type, properties: 
-        (track_type, ntuple_to_track_prop_dict(event_set, track_type, properties)),
+        (track_type, uproot_ntuple_to_track_prop_dict(
+            event_set, track_type, properties)),
         properties_by_track_type.keys(), properties_by_track_type.values()))
 
 
-def ntuple_to_track_prop_dict(event_set, track_type, properties):
+def uproot_ntuple_to_track_prop_dict(event_set, track_type, properties):
     """Takes in an uproot ntuple, the data type, and properties to be extracted;
     returns a dictionary from a property name to flattened array of values.
     Note that due to this flattening, all information about which tracks are
@@ -136,7 +139,37 @@ def track_prop_dict_length(track_prop_dict):
         raise ValueError("Invalid track prop dictionary:"
                 "value lists are of different sizes")
 
-    return next(iter(val_list_lengths)) 
+    return next(iter(val_list_lengths))
+
+
+class track_prop_dict_iter:
+    """Iterates through tracks in a track properties dict, where each
+    track is represented as a dictionary from a value name to a single
+    property. Does not alter the original track properties dict."""
+
+    def __init__(self, track_prop_dict, increment=1):
+        self.tpd = deepcopy(track_prop_dict)
+        self.track_index = -1
+        self.increment = increment
+        self.num_tracks = track_prop_dict_length(track_prop_dict)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        self.track_index += self.increment
+        if self.track_index < self.num_tracks:
+            return self._grab_track_by_index(self.tpd, self.track_index)
+        raise StopIteration
+
+    def _grab_track_by_index(self, track_prop_dict, track_index):
+        """Returns a dictionary from track properties to single values
+        by selecting that value from each list in the track properties
+        dict."""
+
+        return dict(map(lambda property_name, val_list:
+            (property_name, val_list[track_index]),
+            track_prop_dict.keys(), track_prop_dict.values()))
 
 
 def shuffle_ntuple_dict(ntuple_dict, seed=None):
@@ -153,8 +186,6 @@ def shuffle_ntuple_dict(ntuple_dict, seed=None):
         An ntuple dict with its value lists shuffled, preserving the
         association between complementary track types.
     """
-
-    #FIXME I hate all this hardcoding but I can't see any other way to do it
 
     # Generate shuffled indices dictionary
     ntuple_dict_num_tracks = ntuple_dict_length(ntuple_dict)
@@ -239,7 +270,7 @@ def shuffle_track_prop_dict(track_prop_dict, shuffled_indices=None, seed=None):
 
 
 def reduce_ntuple_dict(ntuple_dict, track_limit=10,
-        shuffle_tracks=True, seed=None):
+        shuffle_tracks=False, seed=None):
     """Reduces an ntuple dictionary to a number of tracks. If number of tracks
     in the ntuple is less than the track limit specified, print all tracks.
     Can be used for convenient print debugging. Does not affect the original
@@ -267,7 +298,7 @@ def reduce_ntuple_dict(ntuple_dict, track_limit=10,
 
     return dict(map(lambda track_type, track_prop_dict:
         (track_type, reduce_track_prop_dict(
-            track_prop_dict, track_limit[track_type])),
+            track_prop_dict, track_limit[track_type], shuffle_tracks=False)),
         ntuple_dict.keys(), ntuple_dict.values()))
 
 
@@ -395,7 +426,7 @@ def select_indices(track_prop_dict, tpd_selector, invert=True):
     """
 
     # Determine which selection conditions will be applied
-    for property in tpd_selector.keys():
+    for property in list(tpd_selector.keys()):
         if property not in track_prop_dict.keys():
             print(property + " not in tracks properties; will not select")
             tpd_selector.pop(property)
