@@ -6,6 +6,7 @@ from tensorflow.keras import Sequential
 from tensorflow.keras.layers import Softmax
 from .data import make_track_prop_dict_from_dataset as to_track_prop_dict
 from .. import operations as ndops
+from .. import plot as ndplot
 from ..operations import select as sel
 
 
@@ -102,7 +103,7 @@ def true_positive_rate(labels, pred_labels, threshhold=.5):
 
 def false_positive_rate(labels, pred_labels, threshhold=.5):
     """For a binary classifier label, returns the proportion of "false"
-    cases that the model predicted were "true". Throws an error if the
+    cases that the model predicted were "true". Raises an error if the
     lists are of different sizes.
 
     Args:
@@ -123,6 +124,7 @@ def false_positive_rate(labels, pred_labels, threshhold=.5):
             sel(0), sel(1), threshhold)
 
 
+#TODO something is UP here...
 def predict_labels(model, data):
     """Run the model on each element of a dataset and produce a list of
     probabilistic predictions (note: not logits). Assumes a binary
@@ -133,7 +135,7 @@ def predict_labels(model, data):
         data: a dataset for the model to run on
 
     Returns:
-        A list of probabilistic predictions
+        A Python list of probabilistic predictions
     """
 
     # Different models predict in different ways
@@ -144,14 +146,65 @@ def predict_labels(model, data):
     else:
         pred_prob_labels = npsum(model.predict_proba(data), axis=1)
 
-    return pred_prob_labels
+    return list(pred_prob_labels)
 
 
-def plot_pred_comparison_by_threshhold(model, data, labels, pred_comparison,
-        threshholds=30):
-    """Plots either true positive rate or false positive rate by
-    various threshholds. This function will probably end up getting
-    generalized somehow.
+def plot_pred_comparison_by_track_property(model, data, labels,
+        data_properties, label_property, pred_comparison, bin_property, 
+        bins=30, threshhold=.5, ax=plt.figure().add_subplot(111)):
+    """Compares true labels to the model predictions by some function,
+    binned by a track property present in data.
+
+    Args:
+        model: a model that can take in data and output predictions
+        data: the data associated with the labels given to the model
+        labels: a list of binary classifier values, either zero or one
+        data_properties: the properties of each track in the data set.
+            Used to cut if cuts is true
+        label_property: the property of the data label that is being
+            predicted. Used to cut if cuts has any elements
+        pred_comparison: a function that takes in the labels, the
+            predicted labels, and a threshhold value, and returns a
+            number measuring some property of the predicted labels'
+            relation to the actual ones
+        bin_property: a property in data_properties or the
+            label_property that will split the dataset into bins
+        bins: either an int for the number of bins, a 3-tuple of the
+            form (low_bound, high_bound, num_bins), or a list of
+            numbers. See ntupledict.operations.make_bins() for info
+        threshhold: the limit at which a prediction signifies one or
+            the other value of a binary classification
+        ax: an axes object to be used to plot this function
+
+    Returns:
+        The axes object to be used to plot this function
+    """
+
+    pred_labels = predict_labels(model, data)
+    bins = ndops.make_bins(bins)
+    
+    # Add predictive labels as part of track properties dict
+    predkey = "pred_" + label_property
+    track_prop_dict = to_track_prop_dict(data, labels,
+            data_properties, label_property)
+    track_prop_dict.update({predkey: pred_labels})
+
+    def measure_pred_comparison(track_prop_dict):
+        """Measures the prediction comparison of true labels and
+        predicted labels that are within a track propeties dict."""
+
+        return pred_comparison(track_prop_dict[label_property],
+                track_prop_dict[predkey],
+                threshhold)
+
+    return ndplot.plot_measure_by_bin(track_prop_dict, bin_property,
+            measure_pred_comparison, bins, ax)
+
+
+def plot_pred_comparison_by_threshhold(model, data, labels,
+        pred_comparison, threshholds=30, ax=plt.figure().add_subplot(111)):
+    """Compares true labels to the model predictions by some function 
+    at various threshholds.
 
     Args:
         model: a model that can take in data and output predictions
@@ -161,8 +214,12 @@ def plot_pred_comparison_by_threshhold(model, data, labels, pred_comparison,
             predicted labels, and a threshhold value, and returns a
             number measuring some property of the predicted labels'
             relation to the actual ones
-        threshholds: the limit at which a prediction signifies one or
+        threshholds: the limits at which a prediction signifies one or
             the other value of a binary classification
+        ax: an axes object to be used to plot this function
+
+    Returns:
+        The axes object to be used to plot this function
     """
 
     pred_labels = predict_labels(model, data)
@@ -171,19 +228,13 @@ def plot_pred_comparison_by_threshhold(model, data, labels, pred_comparison,
     if not isinstance(threshholds, list):
         threshholds = linspace(0, 1, threshholds)
 
-    ax = plt.figure().add_subplot(111)
     ax.scatter(threshholds, list(map(lambda threshhold: 
         pred_comparison(labels, pred_labels, threshhold),
         threshholds)))
     ax.set_xlabel("Decision Threshhold")
-    ylabel = "TPR" if pred_comparison == true_positive_rate\
-            else "FPR" if pred_comparison == false_positive_rate\
-            else ""  #FIXME generalization will come
-    ax.set_ylabel(ylabel)
 
     return ax
     
-
 
 def plot_rocs(data, labels, models, model_names,
         cuts=[], data_properties=None, label_property=None):
@@ -203,7 +254,7 @@ def plot_rocs(data, labels, models, model_names,
         data_properties: the properties of each track in the data set.
             Used to cut if cuts is true
         label_property: the property of the data label that is being
-            predicted. Used to cut if cuts is true
+            predicted. Used to cut if cuts has any elements
     """
 
     ax = plt.figure().add_subplot(111)

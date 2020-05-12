@@ -3,6 +3,7 @@ from random import seed as set_seed
 from copy import deepcopy
 from functools import reduce
 from math import inf
+from numpy import linspace
 
 
 def ntuples_to_ntuple_dict(event_sets, properties_by_track_type):
@@ -321,7 +322,7 @@ def select(*selector_key):
                 .format(selector_key))
 
 
-def cut_ntuple(ntuple_dict, nd_selector={}):
+def cut_ntuple_dict(ntuple_dict, nd_selector={}):
     """Cuts an ntuple dictionary by cutting each track type according to a
     selector dictionary, cutting those tracks not selected. Tracks are cut
     "symmetrically" across corresponding groups, meaning that any cuts applied
@@ -350,18 +351,18 @@ def cut_ntuple(ntuple_dict, nd_selector={}):
         list(dict.fromkeys(cut_indices_dict["tp"] + cut_indices_dict["matchtrk"])))
 
     cut_ntuple_dict = {}
-    for track_type, trackset in ntuple_dict.items():
+    for track_type in ntuple_dict.keys():
         if track_type in ["trk", "matchtp"]:
             indices_to_cut = trk_matchtp_indices_to_cut
         if track_type in ["tp", "matchtrk"]:
             indices_to_cut = tp_matchtrk_indices_to_cut
-        cut_ntuple_dict[track_type] = cut_trackset_by_indices(
+        cut_ntuple_dict[track_type] = cut_track_prop_dict_by_indices(
             ntuple_dict[track_type], indices_to_cut)
 
     return cut_ntuple_dict
 
 
-def cut_trackset(track_prop_dict, tpd_selector={}):
+def cut_track_prop_dict(track_prop_dict, tpd_selector={}):
     """Cuts an track properties dictionary by cutting each track type according
     to a cut dictionary.
 
@@ -373,7 +374,7 @@ def cut_trackset(track_prop_dict, tpd_selector={}):
         A cut tracks properties dictionary
     """
 
-    return cut_trackset_by_indices(track_prop_dict,
+    return cut_track_prop_dict_by_indices(track_prop_dict,
             select_indices(track_prop_dict, tpd_selector))
 
 
@@ -413,7 +414,7 @@ def select_indices(track_prop_dict, tpd_selector, invert=True):
             track_indices))
 
 
-def cut_trackset_by_indices(track_prop_dict, indices_to_cut):
+def cut_track_prop_dict_by_indices(track_prop_dict, indices_to_cut):
     """Takes in a list of indices to cut and cuts those indices from the
     lists of the dictionary. Assumes that all lists in track_prop_dict
     are the same size. This list of indices will frequently be generated
@@ -447,7 +448,7 @@ def get_proportion_selected(val_list, selector, norm=True):
 
     Args:
         val_list: a list of values of a track property, such as
-            trk_pt or tp_chi2rphi
+            tp_pt or trk_chi2rphi
         selector: a property that these value can satisfy. For
             example, "lambda trk_eta: trk_eta <= 2.4".
         norm: if True, divides the number of tracks meeting the condition
@@ -459,7 +460,7 @@ def get_proportion_selected(val_list, selector, norm=True):
     """
 
     if len(val_list) == 0:
-        print("Cannot calculate proportion meeting condition in zero-length"
+        print("Cannot calculate proportion meeting condition in zero-length "
                 "quantity. Returning zero.")
         return 0
 
@@ -482,10 +483,101 @@ def eff_from_ntuple_dict(ntuple_dict, tp_selector_dict={}):
         The efficiency of the tracking algorithm run on the given ntuple
     """
 
-    # Cutting on tracking particles also cuts the corresponding matchtracks
-    cut_ntuple_dict = ndops.cut_ntuple(ntuple_dict, {"tp": tp_selector_dict})
-    tps_nmatch = cut_ntuple_dict["tp"]["nmatch"]
+    return eff_from_track_prop_dict(ntuple_dict["tp"], tp_selector_dict)
 
-    # Now, count how many tp's have an nmatch value greater than zero
-    return get_proportion_selected(tps_nmatch, sel(1, inf))
+
+def eff_from_track_prop_dict(track_prop_dict_tp, selector_dict={}):
+    """Finds the efficieny of an track properties dict. Restrictions
+    can be made on the tracking particles by performing a cut. Note
+    that the track properties dictionary must be of tracking particles.
+
+    Args:
+        track_prop_dict: a tracks properties dictionary
+        tp_selector_dict: a dictionary from tp properties 
+            ("pt", "eta", etc.) to conditions (lambda pt: pt < 2, etc.)
+
+    Returns:
+        The efficiency of the tracking algorithm run on the given track
+        properties dict
+    """   
+
+    return get_proportion_selected(
+            cut_track_prop_dict(
+                track_prop_dict_tp, selector_dict)["nmatch"],
+            select(1, inf))
+
+
+def make_bins(bin_specifier, binned_property):
+    """Takes in a bin specifier, which is either an integer number of
+    bins, a tuple of the form (lower_bound, upper_bound, num_bins) or
+    a list of bins, with the last element being the upper bound of the
+    last bin.
+
+    If bin_specifier is an integer, it uses the max and min values of
+    binned_property to find its range.
+
+    If bin_specifier is a 3-tuple, it creates the third argument number
+    of evenly spaced bins between the first two values.
+
+    If bin_specifier is a list, return the list.
+
+    Args:
+        bin_specifier: either an int for the number of bins, a 3-tuple
+            of the form (low_bound, high_bound, num_bins), or a list of
+            numbers
+        binned_propety: a list of values forming the basis for the bins
+
+    Returns:
+        A list of bin edges, of length one greater than the number of
+        bins.
+
+    Raises:
+        ValueError if bin_specifier is not an int, tuple, or list
+    """
+
+    if isinstance(bin_specifier, int):
+        bin_specifier = (min(binning_values), max(binning_values),
+                bin_specifier)
+    if isinstance(bin_specifier, tuple):
+        bin_specifier = list(linspace(*bin_specifier))
+    if isinstance(bin_specifier, list):
+        return bin_specifier
+
+    raise ValueError("Expected int, tuple, or list as argument "
+            "'bin_specifier', but received" + str(type(bin_specifier)))
+
+
+def take_measure_by_bin(track_prop_dict, bin_property, measure, bins=30):
+    """Bin a track properties dict by a value list of a corresponding
+    property, then compute some measure for the values in each bin. For
+    example, the track_prop_dict could could be of tracking particles
+    and contain nmatch, and the measure could be
+    eff_from_track_prop_dict.
+
+    Args:
+        track_prop_dict: a track properties dict
+        bin_property: a property in track_prop_dict that will split it
+            into bins. Preferably a continuous value, but no hard
+            restriction is made in this code
+        measure: a function that takes in a track properties dict and
+            returns a number
+        bins: either an int for the number of bins, a 3-tuple of the
+            form (low_bound, high_bound, num_bins), or a list of
+            numbers. See ntupledict.operations.make_bins() for info
+
+    Returns:
+        The bins and the bin heights computed from the binned value
+        lists
+    """
+
+    binning_val_list = track_prop_dict[bin_property]
+    bins = make_bins(bins, binning_val_list)
+
+    # Sort values into bins with respect to binning value
+    bin_heights = list(map(lambda lower_bin, upper_bin:
+        measure(cut_track_prop_dict(track_prop_dict,
+            {bin_property: select(lower_bin, upper_bin)})),  #FIXME select() option to exlclude values of exactly upper bin
+        bins[:-1], bins[1:]))
+
+    return bins, bin_heights
 

@@ -1,10 +1,9 @@
 import tensorflow as tf
 
 
-def make_datasets_from_track_prop_dict(track_prop_dict, 
-        label_property="genuine", split_dist=[.7, .2, .1],
-        name="dataset", outputdir="saveddata", shuffle=True,
-        seed=None):
+def make_datasets_from_track_prop_dict(track_prop_dict,
+        label_property="genuine", data_properties=None, 
+        split_dist=[.7, .2, .1], shuffle=True, seed=None):
     """Makes one or more datasets from the given track properties dict,
     given a label property that tells it which track property to use as
     the label and a split distribution that tells it how many datasets
@@ -16,11 +15,10 @@ def make_datasets_from_track_prop_dict(track_prop_dict,
         label_property: the field of the track properties dictionary
             that a model will predict. This will typically be "genuine"
             or "fake"
+        data_properties: the properties to pull from track_prop_dict to
+            put into the dataset. If none, pulls all data into dataset
         split_dist: tracks will be organized into datasets with relative
             sizes. [.7, .3] and [700, 300] produce identical output
-        name: the name to associate with these datasets so they can be
-            found and used again
-        outputdir: where to put these datasets
         seed: a seed to use in array shuffling for reproducability
 
     Returns:
@@ -28,8 +26,9 @@ def make_datasets_from_track_prop_dict(track_prop_dict,
         names and then one two-tuple for each dataset created
     """
 
-    data_properties = list(track_prop_dict.keys())
-    data_properties.remove(label_property)
+    if data_properties is None:
+        data_properties = list(track_prop_dict.keys())
+        data_properties.remove(label_property)
     label_array = tf.constant(track_prop_dict.pop(label_property)) #TODO labels of more than one element?
     data_array = tf.transpose(tf.constant(list(track_prop_dict.values())))
 
