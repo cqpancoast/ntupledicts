@@ -8,8 +8,7 @@ def make_neuralnet(train_dataset, eval_dataset=None,
                    hidden_layers=[], epochs=10, classifier_order=1):
     """Makes a neural net in tensorflow using training data and optional
     validation data. Takes in the dimension of the data, has the number
-    of specified hidden layers, and ends with softmaxed-output of the
-    order of the classifier (binary, tertiary, etc.).
+    of specified hidden layers, and ends with probablistic output.
 
     Args:
         train_dataset: a TrackPropertiesDataset that the model will
@@ -20,7 +19,7 @@ def make_neuralnet(train_dataset, eval_dataset=None,
             are no hidden layers, just the input and the output, which
             are predetermined by data dimension
         epochs: how many time the neural net is trained on data
-        classifier_order: order of categorization. This is set to 2 at
+        classifier_order: order of categorization. This is set to 1 at
             default, assuming a binary classifier
 
     Returns:
@@ -41,9 +40,6 @@ def make_neuralnet(train_dataset, eval_dataset=None,
                          optimizer='adam',
                          metrics=['accuracy'])
 
-    # Print summary
-    linear_model.summary()
-
     # Train loop
     steps_per_epoch = train_dataset.get_num_data() / epochs
     validation_data = None if eval_dataset is None\
@@ -57,15 +53,15 @@ def make_neuralnet(train_dataset, eval_dataset=None,
     return linear_model
 
 
-def make_gbdt(train_data, train_labels):
+def make_gbdt(train_dataset, n_estimators=100, max_depth=3, random_state=23):
     """Make a gradient boosted decision tree in sklearn using training
     data, using Claire's model as reference for creation parameters."""
 
     gbdt = GradientBoostingClassifier(
-        n_estimators=100,
-        max_depth=3,
-        random_state=23)
-    gbdt.fit(train_data, train_labels)
+        n_estimators=n_estimators,
+        max_depth=max_depth,
+        random_state=random_state)
+    gbdt.fit(train_dataset.data, train_dataset.labels)
 
     return gbdt
 
