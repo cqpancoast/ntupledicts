@@ -1,6 +1,32 @@
 import tensorflow as tf
 
 
+class TrackPropertiesDataset:
+    """A track property dict stored as a tensorflow dataset. Accessible
+    from this are the data array, the label array, and the indexing
+    track properties for both. Currently assumes a scalar label."""
+
+    def __init__(self, data, data_properties, labels, label_property):
+        """Initializes using preprocessed tensorflow arrays to set
+        fields directly."""
+
+        self.data = data
+        self.data_properties = data_properties
+        self.labels = labels
+        self.label_property = label_property
+
+    def get_data_dim(self):
+        """Returns the dimension of each element in the data portion of
+        the dataset."""
+
+        return int(tf.shape(self.data)[1])
+
+    def get_num_data(self):
+        """Returns the number of elements in this dataset."""
+
+        return int(tf.shape(self.data)[0])
+
+
 def make_datasets_from_track_prop_dict(track_prop_dict,
         data_properties=None, label_property="genuine",
         split_dist=[.7, .2, .1]):
@@ -49,42 +75,34 @@ def make_datasets_from_track_prop_dict(track_prop_dict,
 
     dataset_split_sizes = get_dataset_split_sizes(split_dist,
             int(tf.shape(data_array)[0]))
-    data_datasets = tf.split(data_array, dataset_split_sizes)
-    label_datasets = tf.split(label_array, dataset_split_sizes)
+    data_split = tf.split(data_array, dataset_split_sizes)
+    label_split = tf.split(label_array, dataset_split_sizes)
 
-    dataset_tuples = list(map(lambda data_dataset, label_dataset:
-        (data_dataset, label_dataset),
-        data_datasets, label_datasets))
+    datasets = list(map(lambda data, labels:
+        TrackPropertiesDataset(data, data_properties, labels, label_property),
+        data_split, label_split))
 
-    return [(data_properties, label_property)] + dataset_tuples
+    return datasets
 
 
-def make_track_prop_dict_from_dataset(data, labels, 
-        data_properties, label_property):
+def make_track_prop_dict_from_dataset(dataset):
     """Turns tensorflow data back into a track properties dictionary.
     For example, one might do this to recut the data. Note that this
     recasting will not preserve the data type (everything is cast to a
     float) of an original reference track properties dictionary.
 
     Args:
-        data: a tensorflow tensor of data indexed by tracks and then by
-            track properties
-        labels: a tensorflow tensor of data labels indexed by tracks and
-            then by label component
-        data_properties: the names of the track properties contained in
-            the data array. Should be the same dimension as the track
-            properties axis in data
-        label_property: the track property that labels the data.
-            Currently, only one label is supported
+        dataset: a TrackPropertiesDataset
 
     Returns:
         A track properties dict from data_properties + label_property to
         lists of property values contained in data and labels
     """
 
-    tpd_keys = data_properties + [label_property]
+    tpd_keys = dataset.data_properties + [dataset.label_property]
     tpd_value_lists = tf.transpose(tf.unstack(tf.concat(
-        [data, tf.stack([tf.cast(labels, tf.float32)], axis=1)],
+        [dataset.data,
+            tf.stack([tf.cast(dataset.labels, tf.float32)], axis=1)],
         axis=1)))
 
     return dict(map(lambda tpd_key, tpd_val_list:

@@ -2,25 +2,22 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, roc_auc_score
 from numpy import linspace
 from .data import make_track_prop_dict_from_dataset as to_track_prop_dict
-from .. import operations as ndops
+#from .. import operations as ndops
 from .. import plot as ndplot
 from . import predict as mlpred
 
 
-def plot_pred_comparison_by_track_property(model, data, labels,
-        data_properties, label_property, pred_comparison, bin_property, 
-        bins=30, threshhold=.5, ax=plt.figure().add_subplot(111)):
+def plot_pred_comparison_by_track_property(pred_labels, dataset,
+        pred_comparison, bin_property, bins=10, threshhold=.5,
+        ax=plt.figure().add_subplot(111)):
     """Compares true labels to the model predictions by some function,
     binned by a track property present in data.
 
     Args:
-        model: a model that can take in data and output predictions
-        data: the data associated with the labels given to the model
-        labels: a list of binary classifier values, either zero or one
-        data_properties: the properties of each track in the data set.
-            Used to cut if cuts is true
-        label_property: the property of the data label that is being
-            predicted. Used to cut if cuts has any elements
+        pred_labels: a list of labels predicted by some model or cuts
+            using data from dataset
+        dataset: a TrackPropertiesDataset containing the data, labels,
+            and corresponding property names for both
         pred_comparison: a function that takes in the labels, the
             predicted labels, and a threshhold value, and returns a
             number measuring some property of the predicted labels'
@@ -38,19 +35,17 @@ def plot_pred_comparison_by_track_property(model, data, labels,
         The axes object to be used to plot this function
     """
 
-    pred_labels = mlpred.predict_labels(model, data)
-    
     # Add predictive labels as part of track properties dict
-    predkey = "pred_" + label_property
-    track_prop_dict = to_track_prop_dict(data, labels,
-            data_properties, label_property)
+    predkey = "pred_" + dataset.label_property
+    track_prop_dict = to_track_prop_dict(dataset)
+
     track_prop_dict.update({predkey: pred_labels})
 
     def measure_pred_comparison(track_prop_dict):
         """Measures the prediction comparison of true labels and
         predicted labels that are within a track propeties dict."""
 
-        return pred_comparison(track_prop_dict[label_property],
+        return pred_comparison(track_prop_dict[dataset.label_property],
                 track_prop_dict[predkey],
                 threshhold)
 
@@ -58,15 +53,15 @@ def plot_pred_comparison_by_track_property(model, data, labels,
             measure_pred_comparison, bins, ax)
 
 
-def plot_pred_comparison_by_threshhold(model, data, labels,
-        pred_comparison, threshholds=30, ax=plt.figure().add_subplot(111)):
+def plot_pred_comparison_by_threshhold(pred_labels, labels,
+        pred_comparison, threshholds=10, ax=plt.figure().add_subplot(111)):
     """Compares true labels to the model predictions by some function 
     at various threshholds.
 
     Args:
         model: a model that can take in data and output predictions
-        data: the data associated with the labels given to the model
-        labels: a list of binary classifier values, either zero or one
+        dataset: a TrackPropertiesDataset containing the data, labels,
+            and corresponding property names for both
         pred_comparison: a function that takes in the labels, the
             predicted labels, and a threshhold value, and returns a
             number measuring some property of the predicted labels'
@@ -76,10 +71,8 @@ def plot_pred_comparison_by_threshhold(model, data, labels,
         ax: an axes object to be used to plot this function
 
     Returns:
-        The axes object to be used to plot this function
+        The axes object to used to plot this function
     """
-
-    pred_labels = mlpred.predict_labels(model, data)
 
     # Generate threshhold list if threshholds is not a list
     if not isinstance(threshholds, list):
@@ -93,7 +86,7 @@ def plot_pred_comparison_by_threshhold(model, data, labels,
     return ax
     
 
-def plot_rocs(data, labels, models, model_names,
+def plot_rocs(dataset, models, model_names,
         cuts=[], data_properties=None, label_property=None):
     """Create ROC curves through true positive rate / false positive
     rate space for different models by changing the cut on model-
@@ -102,8 +95,8 @@ def plot_rocs(data, labels, models, model_names,
     classifier such as trk_genuine.
 
     Args:
-        data: a tensorflow tensor of data
-        labels: a tensorflow tensor of label data
+        dataset: a TrackPropertiesDataset containing the data, labels,
+            and corresponding property names for both
         models: a list of models with predictive capabilites
         model_names: the names of the models for the plot legend
         cuts: an optional list of selector dictionaries to apply to
@@ -118,23 +111,18 @@ def plot_rocs(data, labels, models, model_names,
 
     # Plot ROC curve for models 
     for model, model_name in zip(models, model_names):
-        pred_labels = mlpred.predict_labels(model, data)
-        fpr, tpr, _ = roc_curve(labels, pred_labels)
-        auc = roc_auc_score(labels, pred_labels)
+        pred_labels = mlpred.predict_labels(model, dataset.data)
+        fpr, tpr, _ = roc_curve(dataset.labels, pred_labels)
+        auc = roc_auc_score(dataset.labels, pred_labels)
         auc_string = ' ('+str(round(auc,3))+')'
         ax.plot(fpr, tpr, label=model_name+auc_string,
                 linewidth=2)
 
     # Plot cuts, if any are given
     for cut in cuts:
-        track_prop_dict = to_track_prop_dict(
-               data, labels, data_properties, label_property)
-        cut_indices = ndops.select_indices(track_prop_dict, cut)
-        cut_pred_labels = list(map(
-            lambda index: 0 if index in cut_indices else 1,
-           range(ndops.track_prop_dict_length(track_prop_dict))))
-        fpr_cut = mlpred.false_positive_rate(labels, cut_pred_labels)
-        tpr_cut = mlpred.true_positive_rate(labels, cut_pred_labels)
+        pred_labels = mlpred.predict_labels_cuts(cut, dataset)
+        fpr_cut = mlpred.false_positive_rate(dataset.labels, pred_labels)
+        tpr_cut = mlpred.true_positive_rate(dataset.labels, pred_labels)
         ax.scatter(fpr_cut, tpr_cut,
                 s=80, marker='*', label='cuts', color='red')
         

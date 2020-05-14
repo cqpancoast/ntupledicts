@@ -1,8 +1,6 @@
-from numpy import sum as npsum
-from tensorflow.keras import Sequential
-from tensorflow.keras.layers import Softmax
 from .. import operations as ndops
 from ..operations import select as sel
+from .data import make_track_prop_dict_from_dataset as to_track_prop_dict
 
 
 def check_pred_labels_size(labels, pred_labels):
@@ -119,7 +117,6 @@ def false_positive_rate(labels, pred_labels, threshhold=.5):
             sel(0), sel(1), threshhold)
 
 
-#TODO something is UP here...
 def predict_labels(model, data):
     """Run the model on each element of a dataset and produce a list of
     probabilistic predictions (note: not logits). Assumes a binary
@@ -127,7 +124,8 @@ def predict_labels(model, data):
 
     Args:
         model: a tensorflow or sklearn model capable of prediction
-        data: a dataset for the model to run on
+        data: an array of elements that the model can use to make
+            predictions
 
     Returns:
         A Python list of probabilistic predictions
@@ -135,13 +133,30 @@ def predict_labels(model, data):
 
     # Different models predict in different ways
     if "keras" in str(type(model)):
-        #pred_prob_labels_full = Sequential(
-        #        [model, Softmax()]).predict(data)
-        pred_prob_labels_full = model(data).numpy()
+        pred_prob_labels =  model.predict(data)
     else:
-        pred_prob_labels_full = model.predict_proba(data)
-    pred_prob_labels = list(map(lambda l: l[0], pred_prob_labels_full))
+        pred_prob_labels = map(lambda l: l[1], model.predict_proba(data))
 
     return list(pred_prob_labels)
 
+
+def predict_labels_cuts(tpd_selector, dataset):
+    """Return a list of labels corresponding to which tracks were
+    selected in a dataset. Interpreted in the context of this ML
+    package as predicting some binary track property based on cuts.
+
+    Args:
+        tpd_selector: a selector for a track properties dict
+        dataset: a TrackPropertiesDataset
+
+    Returns:
+        A Python list of labels corresponding to which tracks were
+        selected in a dataset.
+    """
+
+    track_prop_dict = to_track_prop_dict(dataset)
+    cut_indices = ndops.select_indices(track_prop_dict, tpd_selector)
+
+    return list(map(lambda index: 0 if index in cut_indices else 1,
+       range(ndops.track_prop_dict_length(track_prop_dict))))
 

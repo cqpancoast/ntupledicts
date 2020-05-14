@@ -541,7 +541,7 @@ def eff_from_track_prop_dict(track_prop_dict_tp, selector_dict={}):
 def make_bins(bin_specifier, binning_values):
     """Takes in a bin specifier, which is either an integer number of
     bins, a tuple of the form (lower_bound, upper_bound, num_bins) or
-    a list of bins, with the last element being the upper bound of the
+    a list of values, with the last element being the upper bound of the
     last bin.
 
     If bin_specifier is an integer, it uses the max and min values of
@@ -570,6 +570,8 @@ def make_bins(bin_specifier, binning_values):
         bin_specifier = (min(binning_values), max(binning_values),
                 bin_specifier)
     if isinstance(bin_specifier, tuple):
+        bin_specifier = list(bin_specifier)
+        bin_specifier[2] += 1  # we'll need one more value than we want bins 
         bin_specifier = list(linspace(*bin_specifier))
     if isinstance(bin_specifier, list):
         return bin_specifier
