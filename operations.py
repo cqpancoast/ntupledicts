@@ -61,11 +61,18 @@ def add_track_prop_dicts(track_prop_dicts):
     Returns:
         An track properties dictionary with the lists of values of each
         track properties dict in the input list concatenated
+
+    Raises:
+        ValueError: any track properties dicts don't share a property
     """
 
     def add_two_track_prop_dicts(tp_so_far, tp_to_add):
         """Adds two track properties dicts together as per rules in
         parent function. Returns the sum."""
+
+        if set(tp_so_far.keys()) != set(tp_to_add.keys()):
+            raise ValueError("Track property dictionaries with differing "
+                    "properties cannot be added.")
 
         return dict(map(lambda property, vals_so_far, vals_to_add:
             (property, vals_so_far + vals_to_add),
@@ -132,14 +139,17 @@ def ntuple_dict_length(ntuple_dict):
 def track_prop_dict_length(track_prop_dict):
     """Returns the number of tracks in a track properties dictionary.
     Raises an exception if the value lists in the input dictionary are
-    not all of the same length."""
+    not all of the same length. Returns zero if the track properties
+    dict is empty."""
 
     # A fancy way of checking if all value lists are the same length
     val_list_lengths = set(map(len, track_prop_dict.values()))
     if len(val_list_lengths) > 1:
         raise ValueError("Invalid track prop dictionary:"
                 "value lists are of different sizes")
-
+    elif len(val_list_lengths) == 0:
+        return 0
+    
     return next(iter(val_list_lengths))
 
 

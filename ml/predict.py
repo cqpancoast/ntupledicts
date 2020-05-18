@@ -154,6 +154,7 @@ def predict_labels_cuts(tpd_selector, dataset):
     """
 
     track_prop_dict = dataset.to_track_prop_dict()
+
     cut_indices = ndops.select_indices(track_prop_dict, tpd_selector)
 
     return list(map(lambda index: 0 if index in cut_indices else 1,

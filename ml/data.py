@@ -9,7 +9,7 @@ class TrackPropertiesDataset:
     track properties for both. Currently assumes a scalar label."""
 
     def __init__(self, track_prop_dict, label_property,
-            active_data_properties):
+            active_data_properties, prediction_dict={}):
         """Initializes using preprocessed tensorflow arrays to set
         fields directly."""
 
@@ -20,6 +20,7 @@ class TrackPropertiesDataset:
         self._track_prop_dict = track_prop_dict
         self.set_label_property(label_property)
         self.set_active_data_properties(active_data_properties)
+        self._predictions = prediction_dict
 
     def __add__(self, other):
         """Add this TrackPropertiesDataset together with another that
@@ -53,12 +54,6 @@ class TrackPropertiesDataset:
 
         return not self.__eq__(other)
 
-    def to_track_prop_dict(self):
-        """Converts this TrackPropertiesDataset to a track properties
-        dict by simply returning the track prop dict it has stored."""
-
-        return deepcopy(self._track_prop_dict)
-
     def get_data_dim(self, just_active_data=True):
         """Returns the dimension of each element in the data portion of
         the dataset. If active is True, return the number of "active"
@@ -71,6 +66,8 @@ class TrackPropertiesDataset:
         """Returns the number of elements in this dataset."""
 
         return len(next(iter(self._track_prop_dict.values())))
+
+    # DATA
 
     def get_data(self, data_properties=None):
         """Returns data corresponding to the given data properties as
@@ -108,6 +105,8 @@ class TrackPropertiesDataset:
 
         self._active_data_properties = track_properties
 
+    # LABELS
+
     def get_labels(self):
         """Returns data corresponding to the given label property."""
 
@@ -129,17 +128,93 @@ class TrackPropertiesDataset:
 
         self._label_property = track_property
 
-    def split(self, split_list, shuffle_tracks=False):
+    # PREDICTIONS
+
+    def get_all_predictions(self):
+        """Returns a tensorflow list of predicted labels, accessing a
+        previously set label by name."""
+
+        return dict(map(lambda pred_name:
+            (pred_name, self.get_prediction(pred_name)),
+            self.get_prediction_names()))
+
+    def get_all_prediction_names(self):
+        """Returns a list of names of all predictions in this
+        dataset."""
+
+        return list(self._predictions.keys())
+
+    def get_prediction(self, pred_name):
+        """Returns a tensorflow list of predicted labels, accessing a
+        previously set label by name."""
+
+        return tf.constant(self._predictions[pred_name])
+
+    def add_prediction(self, pred_name, pred_labels):
+        """Adds a list of predictions to this model accessible by a
+        name, where the predictions must correspond to the labels
+        already present. Raises a value error if the length of the
+        given predictions is different than the length of the stored
+        labels."""
+
+        if len(pred_labels) != self.get_num_data():
+            raise ValueError("Given prediction list has different number of "
+                    "elements ({}) than the number in this dataset ({})"
+                    .format(len(pred_labels), len(self.get_num_data())))
+
+        self._predictions.update({pred_name: pred_labels})
+
+    def remove_prediction(self, pred_name):
+        """Removes a prediction from this dataset's prediction dict."""
+
+        self._predictions.pop(pred_name)
+
+    # CUTS
+
+    def cut(self, selector_dict):
+        """Returns an instance of this TrackPropertiesDataset cut by
+        the given selector dict. Does not cut based on predicted
+        labels."""
+
+        indices_to_cut = ndops.select_indices(
+                self._track_prop_dict, selector_dict)
+        return TrackPropertiesDataset(
+                ndops.cut_track_prop_dict_by_indices(
+                    self._track_prop_dict, indices_to_cut),
+                self.get_label_property(),
+                self.get_active_data_properties(),
+                ndops.cut_track_prop_dict_by_indices(
+                    self._predictions, indices_to_cut))
+
+    def split(self, split_list):
         """Returns datasets of number and relative sizes of elements as
         specified in split_dist. Retains the same active properties and
         label property. Does not alter the calling dataset."""
 
-        split_tpds = ndops.split_track_prop_dict(self.to_track_prop_dict(),
-                split_list, shuffle_tracks=shuffle_tracks)
+        split_tpds = ndops.split_track_prop_dict(self._track_prop_dict,
+                split_list)
 
-        return list(map(lambda split_tpd:
+        split_preds = ndops.split_track_prop_dict(self._predictions,
+                split_list)
+        
+        return list(map(lambda split_tpd, split_preds:
             TrackPropertiesDataset(split_tpd,
                 self.get_label_property(),
-                self.get_active_data_properties()),
-            split_tpds))
+                self.get_active_data_properties(),
+                split_preds),
+            split_tpds, split_preds))
+
+    # OTHER
+
+    def to_track_prop_dict(self, include_preds=False):
+        """Converts this TrackPropertiesDataset to a track properties
+        dict by returning all available data, labels, and predictions,
+        keyed by the same names they're associated with here."""
+
+        if include_preds:
+            tpd_to_return = deepcopy(self._track_prop_dict)
+            tpd_to_return.update(deepcopy(self._predictions))
+            return tpd_to_return
+        else:
+            return deepcopy(self._track_prop_dict)
 

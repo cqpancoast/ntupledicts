@@ -4,19 +4,18 @@ from numpy import linspace
 #from .. import operations as ndops
 from .. import plot as ndplot
 from . import predict as mlpred
+from copy import deepcopy
 
 
-def plot_pred_comparison_by_track_property(pred_labels, dataset,
-        pred_comparison, bin_property, bins=10, threshhold=.5,
+def plot_pred_comparison_by_track_property(dataset, pred_name,
+        pred_comparison, bin_property, bins=10, threshhold=.6,
         ax=plt.figure().add_subplot(111)):
     """Compares true labels to the model predictions by some function,
     binned by a track property present in data.
 
     Args:
-        pred_labels: a list of labels predicted by some model or cuts
-            using data from dataset
-        dataset: a TrackPropertiesDataset containing the data, labels,
-            and corresponding property names for both
+        dataset: a TrackPropertiesDataset
+        pred_name: the name of a prediction to be found in dataset
         pred_comparison: a function that takes in the labels, the
             predicted labels, and a threshhold value, and returns a
             number measuring some property of the predicted labels'
@@ -34,33 +33,28 @@ def plot_pred_comparison_by_track_property(pred_labels, dataset,
         The axes object to be used to plot this function
     """
 
-    # Add predictive labels as part of track properties dict
-    predkey = "pred_" + dataset.get_label_property()
-    track_prop_dict = dataset.to_track_prop_dict()
-
-    track_prop_dict.update({predkey: pred_labels})
+    track_prop_dict = dataset.to_track_prop_dict(include_preds=True)
 
     def measure_pred_comparison(track_prop_dict):
         """Measures the prediction comparison of true labels and
         predicted labels that are within a track propeties dict."""
 
         return pred_comparison(track_prop_dict[dataset.get_label_property()],
-                track_prop_dict[predkey],
+                track_prop_dict[pred_name],
                 threshhold)
 
     return ndplot.plot_measure_by_bin(track_prop_dict, bin_property,
             measure_pred_comparison, bins, ax)
 
 
-def plot_pred_comparison_by_threshhold(pred_prob_labels, labels,
+def plot_pred_comparison_by_threshhold(dataset, pred_name,
         pred_comparison, threshholds=10, ax=plt.figure().add_subplot(111)):
     """Compares true labels to the model predictions by some function 
     at various threshholds.
 
     Args:
-        pred_prob_labels: a list of probablistic label predictions made
-            by a model
-        labels: the true list of labels 
+        dataset: a TrackPropertiesDataset
+        pred_name: the name of a prediction to be found in dataset
         pred_comparison: a function that takes in the labels, the
             predicted labels, and a threshhold value, and returns a
             number measuring some property of the predicted labels'
@@ -78,7 +72,8 @@ def plot_pred_comparison_by_threshhold(pred_prob_labels, labels,
         threshholds = linspace(0, 1, threshholds)
 
     ax.scatter(threshholds, list(map(lambda threshhold: 
-        pred_comparison(labels, pred_prob_labels, threshhold),
+        pred_comparison(dataset.get_labels(),
+            dataset.get_prediction(pred_name), threshhold),
         threshholds)))
     ax.set_xlabel("Decision Threshhold")
 
