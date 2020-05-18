@@ -1,6 +1,5 @@
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import Dense
-from tensorflow.keras.layers import Softmax 
 from sklearn.ensemble import GradientBoostingClassifier
 
 
@@ -43,8 +42,8 @@ def make_neuralnet(train_dataset, eval_dataset=None,
     # Train loop
     steps_per_epoch = train_dataset.get_num_data() / epochs
     validation_data = None if eval_dataset is None\
-            else (eval_dataset.data, eval_dataset.labels)
-    linear_model.fit(train_dataset.data, train_dataset.labels,
+            else (eval_dataset.get_data(), eval_dataset.get_labels())
+    linear_model.fit(train_dataset.get_data(), train_dataset.get_labels(),
                      validation_data=validation_data,
                      steps_per_epoch=steps_per_epoch,
                      epochs=epochs,
@@ -55,13 +54,23 @@ def make_neuralnet(train_dataset, eval_dataset=None,
 
 def make_gbdt(train_dataset, n_estimators=100, max_depth=3, random_state=23):
     """Make a gradient boosted decision tree in sklearn using training
-    data, using Claire's model as reference for creation parameters."""
+    data, using Claire's model as reference for creation parameters.
+
+    Args:
+        train_dataset: a TrackPropertiesDataset that the model will
+            train on
+        TODO: I don't understand what any of these other ones do
+
+    Returns:
+        A trained sklearn gradient boosted decision tree
+    """
 
     gbdt = GradientBoostingClassifier(
         n_estimators=n_estimators,
         max_depth=max_depth,
         random_state=random_state)
-    gbdt.fit(train_dataset.data, train_dataset.labels)
+    gbdt.fit(train_dataset.get_data().numpy(),
+            train_dataset.get_labels().numpy())
 
     return gbdt
 

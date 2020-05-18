@@ -1,6 +1,5 @@
 from .. import operations as ndops
 from ..operations import select as sel
-from .data import make_track_prop_dict_from_dataset as to_track_prop_dict
 
 
 def check_pred_labels_size(labels, pred_labels):
@@ -22,7 +21,7 @@ def apply_threshhold(pred_prob_labels, threshhold):
 
 
 def pred_proportion_given_truth_case(labels, pred_labels,
-        labels_restriction, pred_labels_case, threshhold=.5):
+        labels_restriction, pred_labels_case, threshhold=.6):
     """Look at the relative proportion of a value of the predicted
     probability labels, looking only at values who match to an acutal
     label of a particular case.
@@ -71,7 +70,7 @@ def pred_proportion_given_truth_case(labels, pred_labels,
             pred_labels_case)
 
 
-def true_positive_rate(labels, pred_labels, threshhold=.5):
+def true_positive_rate(labels, pred_labels, threshhold=.6):
     """For a binary classifier label, returns the proportion of "true"
     cases that the model predicted correctly. Throws an error if the
     lists are of different sizes.
@@ -94,7 +93,7 @@ def true_positive_rate(labels, pred_labels, threshhold=.5):
             sel(1), sel(1), threshhold)
 
 
-def false_positive_rate(labels, pred_labels, threshhold=.5):
+def false_positive_rate(labels, pred_labels, threshhold=.6):
     """For a binary classifier label, returns the proportion of "false"
     cases that the model predicted were "true". Raises an error if the
     lists are of different sizes.
@@ -154,7 +153,7 @@ def predict_labels_cuts(tpd_selector, dataset):
         selected in a dataset.
     """
 
-    track_prop_dict = to_track_prop_dict(dataset)
+    track_prop_dict = dataset.to_track_prop_dict()
     cut_indices = ndops.select_indices(track_prop_dict, tpd_selector)
 
     return list(map(lambda index: 0 if index in cut_indices else 1,

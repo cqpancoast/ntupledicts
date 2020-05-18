@@ -4,6 +4,7 @@ from copy import deepcopy
 from functools import reduce
 from math import inf
 from numpy import linspace
+from numpy import cumsum
 
 
 def uproot_ntuples_to_ntuple_dict(event_sets, properties_by_track_type):
@@ -142,7 +143,7 @@ def track_prop_dict_length(track_prop_dict):
     return next(iter(val_list_lengths))
 
 
-class track_prop_dict_iter:
+class TrackPropertyDictIterator:
     """Iterates through tracks in a track properties dict, where each
     track is represented as a dictionary from a value name to a single
     property. Does not alter the original track properties dict."""
@@ -302,7 +303,7 @@ def reduce_ntuple_dict(ntuple_dict, track_limit=10,
         ntuple_dict.keys(), ntuple_dict.values()))
 
 
-def reduce_track_prop_dict(track_prop_dict, track_limit=10,
+def reduce_track_prop_dict(track_prop_dict, track_limit=10, min_index=0,
         shuffle_tracks=True, seed=None):
     """Reduces a track properties dictionary such that each of its value
     lists are only a certain length. Does not affect the original track
@@ -311,6 +312,7 @@ def reduce_track_prop_dict(track_prop_dict, track_limit=10,
     Args:
         track_prop_dict: a track properties dictionary
         track_limit: the maximum length for a value list
+        min_index: the first index to include in the result
         shuffle_tracks: if True, shuffles the value lists before reducing
         seed: a seed for the shuffling, for reproducability
 
@@ -322,9 +324,49 @@ def reduce_track_prop_dict(track_prop_dict, track_limit=10,
         track_prop_dict = shuffle_track_prop_dict(track_prop_dict, seed)
 
     return dict(map(lambda track_prop, track_prop_vals:
-        (track_prop, track_prop_vals[:min(track_limit, len(track_prop_vals))]),
+        (track_prop, track_prop_vals[min_index:min(track_limit + min_index,
+            len(track_prop_vals))]),
         track_prop_dict.keys(), track_prop_dict.values()))
 
+
+def split_track_prop_dict(track_prop_dict, split_list, shuffle_tracks=True):
+    """Splits a track properties dict into smaller ones according to
+    the relative sizes of split_list elements.
+
+    Args:
+        track_prop_dict: a track properties dictionary
+        split_list: a list of positive values that determine the number
+            and relative sizes of the post-split track property dicts
+        shuffle_tracks: if true, shuffles each of the result track
+            property dicts  TODO
+
+    Returns:
+        A list of track property dicts.
+    """
+
+    def get_split_sizes(split_list, num_tracks):
+        """Returns the sizes of data by normalizing the provided split
+        distribution and mutliplying by the number of tracks in such
+        a way that the resulting sizes add up to the original tracks."""
+
+        split_list_total = sum(split_list)
+        split_sizes = list(map(lambda split_val:
+            int(split_val * num_tracks / split_list_total),
+            split_list))
+
+        # Ensure the split sizes add up to the total number of tracks
+        split_sizes[-1] += num_tracks - sum(split_sizes)
+
+        return split_sizes
+
+    split_boundaries = [0] + list(cumsum(get_split_sizes(split_list,
+            track_prop_dict_length(track_prop_dict))))
+
+    return list(map(lambda start_index, end_index:
+        reduce_track_prop_dict(track_prop_dict, end_index - start_index,
+            start_index, shuffle_tracks=False),
+        split_boundaries[:-1], split_boundaries[1:]))
+  
 
 def select(*selector_key):
     """Takes in a selector key and returns a selector that returns true for
