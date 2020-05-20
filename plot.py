@@ -62,8 +62,8 @@ def plot_roc_curve_from_cut_list(ntuple_dict, cut_property, cuts,
 
 def plot_measure_by_bin(track_prop_dict, bin_property, measure,
         bins=30, ax=plt.figure().add_subplot(111)):
-    """Bin a track properties dict by a value list of a corresponding
-    property, compute some measure of the values in each bin, then plot.
+    """Splits a track property dict into bins by some value, then
+    compute a measure on each binned track property dict.
 
     Args:
         track_prop_dict: a track properties dict
@@ -89,6 +89,34 @@ def plot_measure_by_bin(track_prop_dict, bin_property, measure,
 
     ax.scatter(bin_middles, bin_heights)
     ax.set_xlabel(bin_property)
+
+    return ax
+
+
+def plot_property_hist(track_prop_dict, track_property, bins=30,
+        ax=plt.figure().add_subplot(111)):
+    """Plot a histogram distribution of a track property in a track
+    properties dict.
+
+    Args:
+        track_prop_dict: a track properties dict
+        track_property: a property in track_prop_dict that will split it
+            into bins. Preferably a continuous value, but no hard
+            restriction is made in this code
+        bins: either an int for the number of bins, a 3-tuple of the
+            form (low_bound, high_bound, num_bins), or a list of
+            numbers. See ntupledict.operations.make_bins() for info
+        ax: an axes object to overlay this data onto a previous plot
+
+    Returns:
+        A matplotlib.pyplot.Axes object for adjusting plot properties
+        and overlaying data
+    """
+
+    ax = plot_measure_by_bin(track_prop_dict, track_property,
+            lambda tpd: len(tpd[track_property]), bins, ax)
+    ax.set_ylabel("num. tracks")
+    ax.set_title("Histrogram of {}".format(track_property))
 
     return ax
 
