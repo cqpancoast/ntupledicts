@@ -40,7 +40,7 @@ def make_neuralnet(train_dataset, eval_dataset=None,
                          metrics=['accuracy'])
 
     # Train loop
-    steps_per_epoch = train_dataset.get_num_data() / epochs
+    steps_per_epoch = train_dataset.size() / epochs
     validation_data = None if eval_dataset is None\
             else (eval_dataset.get_data(), eval_dataset.get_labels())
     linear_model.fit(train_dataset.get_data(), train_dataset.get_labels(),
