@@ -251,7 +251,7 @@ def shuffle_track_prop_dict(track_prop_dict, shuffled_indices=None, seed=None):
         ValueError: if shuffled_indices is different length than
         track_prop_dict
     """
-    
+
     def generate_shuffled_indices(tpd_length):
         """Generates a list of shuffled indices for use in shuffling
         tracks in this track property dictionary."""
@@ -266,7 +266,7 @@ def shuffle_track_prop_dict(track_prop_dict, shuffled_indices=None, seed=None):
         indices or a random seed provided."""
 
         return list(map(lambda i: val_list[i], shuffled_indices))
-    
+
     tpd_length = track_prop_dict_length(track_prop_dict)
 
     if shuffled_indices is None:
@@ -274,7 +274,7 @@ def shuffle_track_prop_dict(track_prop_dict, shuffled_indices=None, seed=None):
     if len(shuffled_indices) != tpd_length:
         raise ValueError("shuffled_indices length differs from"
                 "track_prop_dict length")
-    
+
     return dict(map(lambda property_name, val_list:
         (property_name, shuffle_val_list(val_list, shuffled_indices)),
         track_prop_dict.keys(), track_prop_dict.values()))
@@ -376,40 +376,53 @@ def split_track_prop_dict(track_prop_dict, split_list, shuffle_tracks=True):
         reduce_track_prop_dict(track_prop_dict, end_index - start_index,
             start_index, shuffle_tracks=False),
         split_boundaries[:-1], split_boundaries[1:]))
-  
 
-def select(*selector_key):
-    """Takes in a selector key and returns a selector that returns true for
-    selected values and false for non-selected values. This is how cuts are
-    applied in this setup.
-    
+
+def select(*selector_key, invert=False):
+    """Takes in a selector key and returns a selector that returns true
+    for selected values and false for non-selected values. This is how
+    cuts are applied in ntupledicts.
+
     Args:
-        selector_key: If a single number, the selector will return true for
-            that number. If two numbers, the selector will return true for
-            numbers in that range, inclusive.
+        selector_key: If a single number, the selector will return true
+            for that number. If two numbers, the selector will return
+            true for numbers in that range, inclusive. If a list, will
+            treat each element of a list as a selector and logical OR
+            them together. This is done instead of AND, as AND can
+            simply be achieved by applying multiple selectors.
+        invert: Invert the selection. False by default.
 
     Returns:
-        A selector, a function that returns true for some numbers and false
-        for others.
+        A selector, a function that returns true for some values and
+        false for all others.
 
     Raises:
-        ValueError: for invalid selector keys
+        ValueError: for invalid selector keys.
     """
 
     if len(selector_key) == 1:
-        return lambda val: val == next(iter(selector_key))
-    if len(selector_key) == 2:
-        return lambda val: val >= selector_key[0] and val <= selector_key[1]
+        key_contents = next(iter(selector_key))
+        if type(key_contents) == list:
+            selector = lambda val: any(map(
+                lambda sub_selector: sub_selector(val),
+                key_contents))
+        else:
+            selector = lambda val: val == next(iter(selector_key))
+    elif len(selector_key) == 2:
+        selector = lambda val: val >= selector_key[0] and val <= selector_key[1]
     else:
         raise ValueError("Invalid selector key: {}. Read the docs!"
                 .format(selector_key))
 
+    return lambda val: invert != selector(val)
 
-def cut_ntuple_dict(ntuple_dict, nd_selector={}):
-    """Cuts an ntuple dictionary by cutting each track type according to a
-    selector dictionary, cutting those tracks not selected. Tracks are cut
-    "symmetrically" across corresponding groups, meaning that any cuts applied
-    to trks are applied to matchtps, and from tps to matchtrks, and vice versa.
+
+def cut_ntuple_dict(ntuple_dict, nd_selector):
+    """Cuts an ntuple dictionary by cutting each track type according to
+    a selector dictionary, cutting those tracks not selected. Tracks are
+    cut "symmetrically" across corresponding groups, meaning that any
+    cuts applied to trks are applied to matchtps, and from tps to
+    matchtrks, and vice versa.
 
     Args:
         ntuple_dict: an ntuple dictionary
@@ -424,14 +437,17 @@ def cut_ntuple_dict(ntuple_dict, nd_selector={}):
     cut_indices_dict.update(dict(map(lambda track_type, cut_dict:
                                      (track_type, select_indices(
                                          ntuple_dict[track_type], cut_dict)),
-                                     nd_selector.keys(), nd_selector.values())))
+                                     nd_selector.keys(),
+                                     nd_selector.values())))
 
     # Combine trk and matchtp, tp and matchtrk indices
     # Sort and remove duplicates
     trk_matchtp_indices_to_cut = sorted(
-        list(dict.fromkeys(cut_indices_dict["trk"] + cut_indices_dict["matchtp"])))
+        list(dict.fromkeys(cut_indices_dict["trk"] +\
+                cut_indices_dict["matchtp"])))
     tp_matchtrk_indices_to_cut = sorted(
-        list(dict.fromkeys(cut_indices_dict["tp"] + cut_indices_dict["matchtrk"])))
+        list(dict.fromkeys(cut_indices_dict["tp"] +\
+                cut_indices_dict["matchtrk"])))
 
     cut_ntuple_dict = {}
     for track_type in ntuple_dict.keys():
@@ -445,9 +461,9 @@ def cut_ntuple_dict(ntuple_dict, nd_selector={}):
     return cut_ntuple_dict
 
 
-def cut_track_prop_dict(track_prop_dict, tpd_selector={}):
-    """Cuts an track properties dictionary by cutting each track type according
-    to a cut dictionary.
+def cut_track_prop_dict(track_prop_dict, tpd_selector):
+    """Cuts an track properties dictionary by cutting each track type
+    according to a cut dictionary.
 
     Args:
         track_prop_dict: a tracks properties dictionary
@@ -463,18 +479,20 @@ def cut_track_prop_dict(track_prop_dict, tpd_selector={}):
 
 def select_indices(track_prop_dict, tpd_selector, invert=True):
     """Selects indices from a tracks properties dictionary that meet the
-    conditions of the selector dictionary. If a property is in the selector
-    dict but not in the tracks properties dict, the program won't raise an
-    exception, but will print a message.
+    conditions of the selector dictionary. If a property is in the
+    selector dict but not in the tracks properties dict, the program
+    won't raise an exception, but will print a message.
 
     Args:
         track_prop_dict: a tracks properties dictionary
-        tpd_selector: a dictionary from track property names to selectors
-        inverse: return all indices NOT selected. Default is True as this
-            jibes with how this function is mainly used: track cuts
+        tpd_selector: a dictionary from track property names to
+            selectors
+        inverse: return all indices NOT selected. Default is True as
+            this jibes with how this function is mainly used: track cuts
 
     Returns:
-        Indices from the track properties dict selected by the selector dict
+        Indices from the track properties dict selected by the selector
+        dict
     """
 
     # Determine which selection conditions will be applied
@@ -484,8 +502,8 @@ def select_indices(track_prop_dict, tpd_selector, invert=True):
             tpd_selector.pop(property)
 
     def index_meets_selection(track_index):
-        """Determine if the track at this index is selected by the selector
-        dict."""
+        """Determine if the track at this index is selected by the
+        selector dict."""
 
         return all(list(map(lambda track_property, property_selector:
             property_selector(track_prop_dict[track_property][track_index]),
