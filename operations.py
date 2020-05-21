@@ -14,12 +14,13 @@ def uproot_ntuples_to_ntuple_dict(event_sets, properties_by_track_type):
     concatenating them all together.
 
     Args:
-        event_sets: a collection of uproot ntuples
+        event_sets: a collection of uproot ntuples.
         properties_by_track_type: a dictionary from track types (trk,
-            matchtrk, etc.) to properties to be selected (eta, pt, chi2)
+            matchtrk, etc.) to properties to be selected
+            (eta, pt, chi2).
 
     Returns:
-        An ntuple dictionary
+        An ntuple dict.
     """
 
     return add_ntuple_dicts(list(map(lambda event_set: 
@@ -28,17 +29,17 @@ def uproot_ntuples_to_ntuple_dict(event_sets, properties_by_track_type):
 
 
 def add_ntuple_dicts(ntuple_dicts):
-    """Adds together multiple ntuple dicts of with the same track types and
-    track type properties. Raises an exception if the dicts do not have this
-    "sameness" property.
+    """Adds together multiple ntuple dicts of with the same track types
+    and track type properties. Raises an exception if the dicts do not
+    have this "sameness" property.
 
     Args:
-        ntuple_dicts: a list of ntuple dicts with the same track types and
-            track type properties
+        ntuple_dicts: a list of ntuple dicts with the same track types
+            and track type properties.
 
     Returns:
-        An ntuple dictionary with the lists of values of each ntuple dict in
-        the input list concatenated
+        An ntuple dictionary with the lists of values of each ntuple
+        dict in the input list concatenated.
     """
 
     track_types = iter(next(iter(ntuple_dicts)).keys())
@@ -56,14 +57,14 @@ def add_track_prop_dicts(track_prop_dicts):
 
     Args:
         track properties_dicts: a list of track properties dicts with
-        the same properties
+            the same properties.
 
     Returns:
         An track properties dictionary with the lists of values of each
-        track properties dict in the input list concatenated
+        track properties dict in the input list concatenated.
 
     Raises:
-        ValueError: any track properties dicts don't share a property
+        ValueError: any track properties dicts don't share a property.
     """
 
     def add_two_track_prop_dicts(tp_so_far, tp_to_add):
@@ -87,12 +88,13 @@ def uproot_ntuple_to_ntuple_dict(event_set, properties_by_track_type):
     """Turns an uproot ntuple into an ntuple dictionary.
 
     Args:
-        event_set: an uproot ntuple
+        event_set: an uproot ntuple.
         properties_by_track_type: a dictionary from track types (trk,
-             matchtrk, etc.) to properties to be selected (eta, pt, chi2)
+             matchtrk, etc.) to properties to be selected
+             (eta, pt, chi2).
 
     Returns:
-        An ntuple dictionary
+        An ntuple dict.
     """
 
     return dict(map(lambda track_type, properties: 
@@ -102,18 +104,18 @@ def uproot_ntuple_to_ntuple_dict(event_set, properties_by_track_type):
 
 
 def uproot_ntuple_to_track_prop_dict(event_set, track_type, properties):
-    """Takes in an uproot ntuple, the data type, and properties to be extracted;
-    returns a dictionary from a property name to flattened array of values.
-    Note that due to this flattening, all information about which tracks are
-    from which event is lost.
+    """Takes in an uproot ntuple, the data type, and properties to be
+    extracted; returns a dictionary from a property name to flattened
+    array of values. Note that due to this flattening, all information
+    about which tracks are from which event is lost.
 
     Args:
-        event_set: an uproot event set
+        event_set: an uproot event set.
         track_type: trk, matchtrk, etc.
         properties: pt, eta, pdgid, etc.
 
     Returns:
-        A tracks properties dictionary
+        A track properties dict.
     """
 
     def get_property_list(property):
@@ -282,17 +284,19 @@ def shuffle_track_prop_dict(track_prop_dict, shuffled_indices=None, seed=None):
 
 def reduce_ntuple_dict(ntuple_dict, track_limit=10,
         shuffle_tracks=False, seed=None):
-    """Reduces an ntuple dictionary to a number of tracks. If number of tracks
-    in the ntuple is less than the track limit specified, print all tracks.
-    Can be used for convenient print debugging. Does not affect the original
-    ntuple dictionary.
+    """Reduces an ntuple dictionary to a number of tracks. If number of
+    tracks in the ntuple is less than the track limit specified, print
+    all tracks. Can be used for convenient print debugging. Does not
+    affect the original ntuple dictionary.
 
     Args:
-        ntuple_dict: an ntuple dictionary
-        track limit: number of tracks to retain in each value list. Or, an
-            integer that will be expanded into a corresponding dictionary
-        shuffle_tracks: if True, shuffles the value lists before reducing
-        seed: a seed for the shuffling, for reproducability
+        ntuple_dict: an ntuple dict.
+        track limit: number of tracks to retain in each value list. Or,
+            an integer that will be expanded into a corresponding
+            dictionary.
+        shuffle_tracks: if True, shuffles the value lists before
+            reducing.
+        seed: a seed for the shuffling, for reproducability.
 
     Returns:
         An ntuple dictionary with track_limit tracks.
@@ -320,11 +324,12 @@ def reduce_track_prop_dict(track_prop_dict, track_limit=10, min_index=0,
     property dictionary.
 
     Args:
-        track_prop_dict: a track properties dictionary
-        track_limit: the maximum length for a value list
-        min_index: the first index to include in the result
-        shuffle_tracks: if True, shuffles the value lists before reducing
-        seed: a seed for the shuffling, for reproducability
+        track_prop_dict: a track properties dict.
+        track_limit: the maximum length for a value list.
+        min_index: the first index to include in the result.
+        shuffle_tracks: if True, shuffles the value lists before
+            reducing.
+        seed: a seed for the shuffling, for reproducability.
 
     Returns:
         A track properties dictionary with reduced-length value lists.
@@ -339,16 +344,15 @@ def reduce_track_prop_dict(track_prop_dict, track_limit=10, min_index=0,
         track_prop_dict.keys(), track_prop_dict.values()))
 
 
-def split_track_prop_dict(track_prop_dict, split_list, shuffle_tracks=True):
+def split_track_prop_dict(track_prop_dict, split_list):
     """Splits a track properties dict into smaller ones according to
-    the relative sizes of split_list elements.
+    the relative sizes of split_list elements. There is no option to
+    shuffle these, as the dict can be shuffled before splitting.
 
     Args:
-        track_prop_dict: a track properties dictionary
+        track_prop_dict: a track properties dict.
         split_list: a list of positive values that determine the number
-            and relative sizes of the post-split track property dicts
-        shuffle_tracks: if true, shuffles each of the result track
-            property dicts  TODO
+            and relative sizes of the post-split track property dicts.
 
     Returns:
         A list of track property dicts.
@@ -544,16 +548,17 @@ def cut_track_prop_dict_by_indices(track_prop_dict, indices_to_cut):
 
 def get_proportion_selected(val_list, selector, norm=True):
     """Find the proportion of tracks selected with the given selector.
-    If there are no tracks in the tracks property value list, returns zero.
-    Can also return the number of tracks meeting the condition.
+    If there are no tracks in the tracks property value list, returns
+    zero. Can also return the number of tracks meeting the condition.
 
     Args:
         val_list: a list of values of a track property, such as
-            tp_pt or trk_chi2rphi
+            tp_pt or trk_chi2rphi.
         selector: a property that these value can satisfy. For
             example, "lambda trk_eta: trk_eta <= 2.4".
-        norm: if True, divides the number of tracks meeting the condition
-            by the total number of tracks. This is the default option.
+        norm: if True, divides the number of tracks meeting the
+            condition by the total number of tracks. This is the default
+            option.
 
     Returns:
         Either the number or proportion of tracks meeting the condition,
@@ -600,7 +605,7 @@ def eff_from_track_prop_dict(track_prop_dict_tp, selector_dict={}):
     Returns:
         The efficiency of the tracking algorithm run on the given track
         properties dict
-    """   
+    """
 
     return get_proportion_selected(
             cut_track_prop_dict(
@@ -658,19 +663,19 @@ def take_measure_by_bin(track_prop_dict, bin_property, measure, bins=30):
     eff_from_track_prop_dict.
 
     Args:
-        track_prop_dict: a track properties dict
+        track_prop_dict: a track properties dict.
         bin_property: a property in track_prop_dict that will split it
             into bins. Preferably a continuous value, but no hard
-            restriction is made in this code
+            restriction is made in this code.
         measure: a function that takes in a track properties dict and
-            returns a number
+            returns a number.
         bins: either an int for the number of bins, a 3-tuple of the
             form (low_bound, high_bound, num_bins), or a list of
-            numbers. See ntupledict.operations.make_bins() for info
+            numbers. See ntupledict.operations.make_bins() for info.
 
     Returns:
         The bins and the bin heights computed from the binned value
-        lists
+        lists.
     """
 
     binning_val_list = track_prop_dict[bin_property]

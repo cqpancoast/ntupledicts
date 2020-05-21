@@ -13,18 +13,19 @@ def plot_roc_curve_from_cut_list(ntuple_dict, cut_property, cuts,
     Args:
         ntuple_dict: an ntuple dict that contains trk with at least
             genuine and the cut property, matchtrk with at least the
-            cut property, and tp with at least nmatch
-        cut_property: the variable to change cuts on
-        cuts: a list of length 2 lists containing lower and upper cut 
+            cut property, and tp with at least nmatch.
+        cut_property: the variable to change cuts on.
+        cuts: a list of length 2 lists containing lower and upper cut
             bounds (inclusive). These are used rather than selectors so
-            that information about the cut can be used in the final graph
-        cuts_constricting: if the cuts are strictly in increasing order of 
-            strictness, the same list can be preserved, decreasing runtime.
-            True by default
-        ax: an axes object to be used to plot this graph
+            that information about the cut can be used in the final
+            graph.
+        cuts_constricting: if the cuts are strictly in increasing order
+            of strictness, the same list can be preserved, decreasing
+            runtime. True by default.
+        ax: an axes object to be used to plot this graph.
 
     Returns:
-        The axes object used to plot this graph
+        The axes object used to plot this graph.
     """
 
     # Build up cuts plot info, which is what will be plotted
@@ -61,25 +62,26 @@ def plot_roc_curve_from_cut_list(ntuple_dict, cut_property, cuts,
 
 
 def plot_measure_by_bin(track_prop_dict, bin_property, measure,
-        bins=30, ax=plt.figure().add_subplot(111)):
+        bins=30, legend_id=None, ax=plt.figure().add_subplot(111)):
     """Splits a track property dict into bins by some value, then
     compute a measure on each binned track property dict.
 
     Args:
-        track_prop_dict: a track properties dict
+        track_prop_dict: a track properties dict.
         bin_property: a property in track_prop_dict that will split it
             into bins. Preferably a continuous value, but no hard
-            restriction is made in this code
+            restriction is made in this code.
         measure: a function that takes in a track properties dict and
-            returns a number
+            returns a number.
         bins: either an int for the number of bins, a 3-tuple of the
             form (low_bound, high_bound, num_bins), or a list of
-            numbers. See ntupledict.operations.make_bins() for info
-        ax: an axes object to overlay this data onto a previous plot
+            numbers. See ntupledict.operations.make_bins() for info.
+        legend_id: the entry in the legend for the line to be plotted.
+        ax: an axes object to overlay this data onto a previous plot.
 
     Returns:
         A matplotlib.pyplot.Axes object for adjusting plot properties
-        and overlaying data
+        and overlaying data.
     """
 
     bins, bin_heights = ndops.take_measure_by_bin(track_prop_dict,
@@ -87,7 +89,7 @@ def plot_measure_by_bin(track_prop_dict, bin_property, measure,
     bin_middles = list(map(lambda lower, upper: (lower + upper) / 2,
         bins[:-1], bins[1:]))
 
-    ax.scatter(bin_middles, bin_heights)
+    ax.scatter(bin_middles, bin_heights, label=legend_id)
     ax.set_xlabel(bin_property)
 
     return ax
