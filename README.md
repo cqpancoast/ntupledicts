@@ -1,15 +1,15 @@
 # ntupledicts
 
-Author: Casey Pancoast
+Author: Casey Pancoast  
 Email: <cqpancoast@gmail.com>
 
-A package for dealing with CMS TrackTrigger ntuples as Python dictionaries.
-Designed with machine learning studies in mind.
+**A package for dealing with CMS TrackTrigger ntuples as Python dictionaries.  
+Designed with machine learning studies in mind.**
 
 Info on the CMS TrackTrigger can be found [here](https://arxiv.org/abs/1705.04321).
 Info on CMS as a whole can be found [here](https://home.cern/science/experiments/cms).
 
-I'd also like to thank [Claire Savard](https://github.com/cgsavard) for her previous
+I'd like to thank [Claire Savard](https://github.com/cgsavard) for her previous
 work in machine learning for the track trigger.
 All plots in the `ntupledicts.ml.plot` module are based off of ones that she developed.
 
@@ -77,6 +77,8 @@ ntuple_dict = ndops.ntuples_to_ntuple_dict(event_sets, properties_by_track_type)
 
 ### Applying cuts to an ntuple dictionary
 
+(`from ntupledicts.operations import select as sel`)
+
 Now say I want to apply some cuts to the ntuple dict. Cuts are performed using
 objects called "selectors", functions which take in a value and spit out true or false.
 For example, a selector might be:
@@ -89,7 +91,7 @@ However, there's a convenient function in the `ntupledicts.operations` library t
 transforms that into this:
 
 ```
-ntupledicts.operations.select(-2.4, 2.4)
+sel(-2.4, 2.4)
 ```
 
 These selectors are collected into "selector dictionaries" which have the same
@@ -110,8 +112,14 @@ One convenient thing about `sel()` here is that it can select a particular value
 as a range, for track properties that take discrete rather than continuous values. This
 is shown above in the case of eventid.
 
-### Other functions of note in ntupledicts.operations
+To logical `AND` with selectors, simply apply two selectors. To logical `OR`, pass your
+desired selectors to logical `OR` into `sel` as a list, like so:
 
+```
+sel([sel(0), sel(1, 4)])
+```
+
+### Other functions of note in ntupledicts.operations
 
 (`import * from ntupledicts.operations`)
 
