@@ -14,7 +14,7 @@ def apply_threshhold(pred_prob_labels, threshhold):
     """Sends every prediction in the list below the threshhold
     (exclusive) to zero and everything above it (inclusive) to one.
     In the parlance of this file, turns predicted probablistic labels
-    into predicted labels."""
+    into predicted labels. Returns a list."""
 
     return list(map(lambda pred: 1 if pred >= threshhold else 0,
         pred_prob_labels))
@@ -63,8 +63,8 @@ def pred_proportion_given_truth_case(labels, pred_labels,
         label_and_pred["pred"],
         labels_and_preds_restricted_domain))
 
-    pred_labels_threshholded_rest_dom = apply_threshhold(
-            pred_labels_restricted_domain, threshhold)
+    pred_labels_threshholded_rest_dom =\
+        apply_threshhold(pred_labels_restricted_domain, threshhold)
 
     return ndops.get_proportion_selected(pred_labels_threshholded_rest_dom,
             pred_labels_case)
@@ -106,12 +106,12 @@ def false_positive_rate(labels, pred_labels, threshhold=.6):
         threshhold: a threshhold to apply to the probablistic data
 
     Returns:
-        The proportion of "false" cases that a model predicted "true" 
+        The proportion of "false" cases that a model predicted "true"
 
     Raises:
         ValueError if the true and predicted labels differ in size
     """
-    
+
     return pred_proportion_given_truth_case(labels, pred_labels,
             sel(0), sel(1), threshhold)
 
@@ -132,7 +132,7 @@ def predict_labels(model, data):
 
     # Different models predict in different ways
     if "keras" in str(type(model)):
-        pred_prob_labels =  model.predict(data)
+        pred_prob_labels = map(lambda l: l[0], model.predict(data))
     else:
         pred_prob_labels = map(lambda l: l[1], model.predict_proba(data))
 
@@ -159,4 +159,3 @@ def predict_labels_cuts(tpd_selector, dataset):
 
     return list(map(lambda index: 0 if index in cut_indices else 1,
        range(ndops.track_prop_dict_length(track_prop_dict))))
-

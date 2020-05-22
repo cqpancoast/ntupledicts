@@ -1,12 +1,11 @@
-from copy import deepcopy
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 from . import operations as ndops
 from .operations import select as sel
 
 
 def plot_roc_curve_from_cut_list(ntuple_dict, cut_property, cuts,
-        cuts_constricting=True, ax=plt.figure().add_subplot(111)):
+                                 cuts_constricting=True, group_name=None,
+                                 ax=plt.figure().add_subplot(111)):
     """Adjusts the cut on a certain variable in an event set and plots
     the change in tracking efficiency and fake rate.
 
@@ -22,6 +21,8 @@ def plot_roc_curve_from_cut_list(ntuple_dict, cut_property, cuts,
         cuts_constricting: if the cuts are strictly in increasing order
             of strictness, the same list can be preserved, decreasing
             runtime. True by default.
+        group_name: a legend entry string for this curve to identify
+            itself others in an overlay
         ax: an axes object to be used to plot this graph.
 
     Returns:
@@ -30,15 +31,15 @@ def plot_roc_curve_from_cut_list(ntuple_dict, cut_property, cuts,
 
     # Build up cuts plot info, which is what will be plotted
     cuts_plot_info = {"cut": [], "eff": [], "fake_rate": []}
-    tpds_to_cut = {}
     cut_ntuple_dict = ntuple_dict
     for cut in cuts:
         # If cuts are constricting, use cut ntuple dict from previous iteration
-        ntuple_dict_to_cut = cut_ntuple_dict if cuts_constricting\
-                else ntuple_dict
+        ntuple_dict_to_cut = cut_ntuple_dict if cuts_constricting \
+            else ntuple_dict
         tpd_selector = {cut_property: sel(*cut)}
-        cut_ntuple_dict = ndops.cut_ntuple(ntuple_dict_to_cut,
-                {"trk": tpd_selector, "matchtrk": tpd_selector})
+        cut_ntuple_dict = ndops.cut_ntuple_dict(ntuple_dict_to_cut,
+                                                {"trk": tpd_selector,
+                                                 "matchtrk": tpd_selector})
         cuts_plot_info["cut"].append(cut[1])  # only get upper bound of cut
         cuts_plot_info["eff"].append(ndops.eff_from_ntuple_dict(
             cut_ntuple_dict["tp"]["pt"]))
@@ -46,8 +47,8 @@ def plot_roc_curve_from_cut_list(ntuple_dict, cut_property, cuts,
             cut_ntuple_dict["trk"]["genuine"], sel(0)))
 
     # Now plot!
-    ax.plot(cuts_plot_info["fake_rate"], cuts_plot_info["eff"],
-            "b.", label=group_name)
+    ax.plot(cuts_plot_info["fake_rate"], cuts_plot_info["eff"], "b.",
+            label=group_name)
 
     ax.set_xlabel("Track fake rate")
     ax.set_ylabel("Tracking efficiency")
@@ -62,7 +63,8 @@ def plot_roc_curve_from_cut_list(ntuple_dict, cut_property, cuts,
 
 
 def plot_measure_by_bin(track_prop_dict, bin_property, measure,
-        bins=30, legend_id=None, ax=plt.figure().add_subplot(111)):
+                        bins=30, legend_id=None,
+                        ax=plt.figure().add_subplot(111)):
     """Splits a track property dict into bins by some value, then
     compute a measure on each binned track property dict.
 
@@ -85,9 +87,9 @@ def plot_measure_by_bin(track_prop_dict, bin_property, measure,
     """
 
     bins, bin_heights = ndops.take_measure_by_bin(track_prop_dict,
-            bin_property, measure, bins)
+                                                  bin_property, measure, bins)
     bin_middles = list(map(lambda lower, upper: (lower + upper) / 2,
-        bins[:-1], bins[1:]))
+                           bins[:-1], bins[1:]))
 
     ax.scatter(bin_middles, bin_heights, label=legend_id)
     ax.set_xlabel(bin_property)
@@ -96,7 +98,7 @@ def plot_measure_by_bin(track_prop_dict, bin_property, measure,
 
 
 def plot_property_hist(track_prop_dict, track_property, bins=30,
-        ax=plt.figure().add_subplot(111)):
+                       ax=plt.figure().add_subplot(111)):
     """Plot a histogram distribution of a track property in a track
     properties dict.
 
@@ -116,9 +118,8 @@ def plot_property_hist(track_prop_dict, track_property, bins=30,
     """
 
     ax = plot_measure_by_bin(track_prop_dict, track_property,
-            lambda tpd: len(tpd[track_property]), bins, ax)
+                             lambda tpd: len(tpd[track_property]), bins, ax)
     ax.set_ylabel("num. tracks")
     ax.set_title("Histrogram of {}".format(track_property))
 
     return ax
-

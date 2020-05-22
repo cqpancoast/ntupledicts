@@ -23,8 +23,8 @@ def uproot_ntuples_to_ntuple_dict(event_sets, properties_by_track_type):
         An ntuple dict.
     """
 
-    return add_ntuple_dicts(list(map(lambda event_set: 
-        uproot_ntuple_to_ntuple_dict(event_set, properties_by_track_type), 
+    return add_ntuple_dicts(list(map(lambda event_set:
+        uproot_ntuple_to_ntuple_dict(event_set, properties_by_track_type),
         event_sets)))
 
 
@@ -97,13 +97,13 @@ def uproot_ntuple_to_ntuple_dict(event_set, properties_by_track_type):
         An ntuple dict.
     """
 
-    return dict(map(lambda track_type, properties: 
+    return dict(map(lambda track_type, properties:
         (track_type, uproot_ntuple_to_track_prop_dict(
             event_set, track_type, properties)),
         properties_by_track_type.keys(), properties_by_track_type.values()))
 
 
-def uproot_ntuple_to_track_prop_dict(event_set, track_type, properties):
+def uproot_ntuple_to_track_prop_dict(event_set, track_type, track_properties):
     """Takes in an uproot ntuple, the data type, and properties to be
     extracted; returns a dictionary from a property name to flattened
     array of values. Note that due to this flattening, all information
@@ -112,20 +112,22 @@ def uproot_ntuple_to_track_prop_dict(event_set, track_type, properties):
     Args:
         event_set: an uproot event set.
         track_type: trk, matchtrk, etc.
-        properties: pt, eta, pdgid, etc.
+        track_properties: pt, eta, pdgid, etc.
 
     Returns:
         A track properties dict.
     """
 
-    def get_property_list(property):
+    def get_property_list(track_property):
         """Returns the list of properties corresponding to the event set,
         track type, and property name."""
 
-        return list(event_set[track_type + "_" + property].array().flatten())
+        return list(event_set[track_type + "_" + track_property]
+                    .array().flatten())
 
-    return dict(map(lambda property: (property, get_property_list(property)),
-        properties))
+    return dict(map(lambda track_property:
+                    (track_property, get_property_list(property)),
+                    track_properties))
 
 
 def ntuple_dict_length(ntuple_dict):
@@ -149,9 +151,9 @@ def track_prop_dict_length(track_prop_dict):
     if len(val_list_lengths) > 1:
         raise ValueError("Invalid track prop dictionary:"
                 "value lists are of different sizes")
-    elif len(val_list_lengths) == 0:
+    if len(val_list_lengths) == 0:
         return 0
-    
+
     return next(iter(val_list_lengths))
 
 
@@ -212,7 +214,7 @@ def shuffle_ntuple_dict(ntuple_dict, seed=None):
         tpd_indices = list(range(track_prop_dict_length(track_prop_dict)))
         shuffle(tpd_indices)
 
-        return (track_type, tpd_indices)
+        return track_type, tpd_indices
 
     shuffled_indices_dict.update(dict(map(generate_shuffled_indices_dict_pair,
         ntuple_dict.keys(), ntuple_dict.values())))
@@ -259,6 +261,7 @@ def shuffle_track_prop_dict(track_prop_dict, shuffled_indices=None, seed=None):
         tracks in this track property dictionary."""
 
         tpd_indices = list(range(tpd_length))
+        set_seed(seed)
         shuffle(tpd_indices)
 
         return tpd_indices
@@ -283,15 +286,15 @@ def shuffle_track_prop_dict(track_prop_dict, shuffled_indices=None, seed=None):
 
 
 def reduce_ntuple_dict(ntuple_dict, track_limit=10,
-        shuffle_tracks=False, seed=None):
+                       shuffle_tracks=False, seed=None):
     """Reduces an ntuple dictionary to a number of tracks. If number of
-    tracks in the ntuple is less than the track limit specified, print
+    tracks in the ntuple is less than the track limit specified, returns
     all tracks. Can be used for convenient print debugging. Does not
     affect the original ntuple dictionary.
 
     Args:
         ntuple_dict: an ntuple dict.
-        track limit: number of tracks to retain in each value list. Or,
+        track_limit: number of tracks to retain in each value list. Or,
             an integer that will be expanded into a corresponding
             dictionary.
         shuffle_tracks: if True, shuffles the value lists before
@@ -318,7 +321,7 @@ def reduce_ntuple_dict(ntuple_dict, track_limit=10,
 
 
 def reduce_track_prop_dict(track_prop_dict, track_limit=10, min_index=0,
-        shuffle_tracks=True, seed=None):
+                           shuffle_tracks=True, seed=None):
     """Reduces a track properties dictionary such that each of its value
     lists are only a certain length. Does not affect the original track
     property dictionary.
@@ -406,17 +409,17 @@ def select(*selector_key, invert=False):
 
     if len(selector_key) == 1:
         key_contents = next(iter(selector_key))
-        if type(key_contents) == list:
+        if isinstance(key_contents, list):
             selector = lambda val: any(map(
                 lambda sub_selector: sub_selector(val),
                 key_contents))
         else:
             selector = lambda val: val == next(iter(selector_key))
     elif len(selector_key) == 2:
-        selector = lambda val: val >= selector_key[0] and val <= selector_key[1]
+        selector = lambda val: selector_key[0] <= val <= selector_key[1]
     else:
         raise ValueError("Invalid selector key: {}. Read the docs!"
-                .format(selector_key))
+                         .format(selector_key))
 
     return lambda val: invert != selector(val)
 
@@ -491,7 +494,7 @@ def select_indices(track_prop_dict, tpd_selector, invert=True):
         track_prop_dict: a tracks properties dictionary
         tpd_selector: a dictionary from track property names to
             selectors
-        inverse: return all indices NOT selected. Default is True as
+        invert: return all indices NOT selected. Default is True as
             this jibes with how this function is mainly used: track cuts
 
     Returns:
@@ -500,10 +503,11 @@ def select_indices(track_prop_dict, tpd_selector, invert=True):
     """
 
     # Determine which selection conditions will be applied
-    for property in list(tpd_selector.keys()):
-        if property not in track_prop_dict.keys():
-            print(property + " not in tracks properties; will not select")
-            tpd_selector.pop(property)
+    for track_property in list(tpd_selector.keys()):
+        if track_property not in track_prop_dict.keys():
+            print(track_property + " not in tracks properties;"
+                                   "will not select")
+            tpd_selector.pop(track_property)
 
     def index_meets_selection(track_index):
         """Determine if the track at this index is selected by the
@@ -540,8 +544,8 @@ def cut_track_prop_dict_by_indices(track_prop_dict, indices_to_cut):
     # Copy, then delete all tracks at indices (backwards)
     cut_track_prop_dict = deepcopy(track_prop_dict)
     for track_to_cut in reversed(sorted(indices_to_cut)):
-        for property in cut_track_prop_dict.keys():
-            del cut_track_prop_dict[property][track_to_cut]
+        for track_property in cut_track_prop_dict.keys():
+            del cut_track_prop_dict[track_property][track_to_cut]
 
     return cut_track_prop_dict
 
@@ -566,8 +570,6 @@ def get_proportion_selected(val_list, selector, norm=True):
     """
 
     if len(val_list) == 0:
-        print("Cannot calculate proportion meeting condition in zero-length "
-                "quantity. Returning zero.")
         return 0
 
     num_tracks_meeting_cond = sum(map(selector, val_list))
@@ -582,7 +584,7 @@ def eff_from_ntuple_dict(ntuple_dict, tp_selector_dict={}):
 
     Args:
         ntuple_dict: an ntuple dictionary
-        tp_selector_dict: a dictionary from tp properties 
+        tp_selector_dict: a dictionary from tp properties
             ("pt", "eta", etc.) to conditions (lambda pt: pt < 2, etc.)
 
     Returns:
@@ -598,8 +600,8 @@ def eff_from_track_prop_dict(track_prop_dict_tp, selector_dict={}):
     that the track properties dictionary must be of tracking particles.
 
     Args:
-        track_prop_dict: a tracks properties dictionary
-        tp_selector_dict: a dictionary from tp properties 
+        track_prop_dict_tp: a tracks properties dictionary
+        selector_dict: a dictionary from tp properties
             ("pt", "eta", etc.) to conditions (lambda pt: pt < 2, etc.)
 
     Returns:
@@ -646,7 +648,7 @@ def make_bins(bin_specifier, binning_values):
                 bin_specifier)
     if isinstance(bin_specifier, tuple):
         bin_specifier = list(bin_specifier)
-        bin_specifier[2] += 1  # we'll need one more value than we want bins 
+        bin_specifier[2] += 1  # we'll need one more value than we want bins
         bin_specifier = list(linspace(*bin_specifier))
     if isinstance(bin_specifier, list):
         return bin_specifier
@@ -684,7 +686,11 @@ def take_measure_by_bin(track_prop_dict, bin_property, measure, bins=30):
     # Sort values into bins with respect to binning value
     bin_heights = list(map(lambda lower_bin, upper_bin:
         measure(cut_track_prop_dict(track_prop_dict,
-            {bin_property: select(lower_bin, upper_bin)})),  #FIXME select() option to exlclude values of exactly upper bin
+            # Select values in range lower_bin to upper_bin, but exclude values
+            # equal to upper_bin
+            {bin_property: select([select(lower_bin, upper_bin),
+                                   select([select(upper_bin)],
+                                          invert=True)])})),
         bins[:-1], bins[1:]))
 
     return bins, bin_heights

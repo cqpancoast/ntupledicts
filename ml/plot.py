@@ -1,10 +1,8 @@
+from numpy import linspace
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, roc_auc_score
-from numpy import linspace
-#from .. import operations as ndops
 from .. import plot as ndplot
 from . import predict as mlpred
-from copy import deepcopy
 
 
 def plot_pred_comparison_by_track_property(dataset, pred_name,
@@ -83,8 +81,7 @@ def plot_pred_comparison_by_threshhold(dataset, pred_name,
     return ax
 
 
-def plot_rocs(dataset, models, model_names,
-        cuts=[], data_properties=None, label_property=None):
+def plot_rocs(dataset, models, model_names, cuts=[]):
     """Create ROC curves through true positive rate / false positive
     rate space for different models by changing the cut on model-
     generated predications. Optionally, plot these against a set of
@@ -98,10 +95,6 @@ def plot_rocs(dataset, models, model_names,
         model_names: the names of the models for the plot legend
         cuts: an optional list of selector dictionaries to apply to
             the data to predict the binary variable in question
-        data_properties: the properties of each track in the data set.
-            Used to cut if cuts is true
-        label_property: the property of the data label that is being
-            predicted. Used to cut if cuts has any elements
     """
 
     ax = plt.figure().add_subplot(111)
@@ -111,7 +104,7 @@ def plot_rocs(dataset, models, model_names,
         pred_prob_labels = mlpred.predict_labels(model, dataset.get_data())
         fpr, tpr, _ = roc_curve(dataset.get_labels(), pred_prob_labels)
         auc = roc_auc_score(dataset.get_labels(), pred_prob_labels)
-        auc_string = ' ('+str(round(auc,3))+')'
+        auc_string = " ({})".format(str(round(auc, 3)))
         ax.plot(fpr, tpr, label=model_name+auc_string,
                 linewidth=2)
 
@@ -121,14 +114,13 @@ def plot_rocs(dataset, models, model_names,
         fpr_cut = mlpred.false_positive_rate(dataset.get_labels(), pred_labels)
         tpr_cut = mlpred.true_positive_rate(dataset.get_labels(), pred_labels)
         ax.scatter(fpr_cut, tpr_cut,
-                s=80, marker='*', label='cuts', color='red')
+                   s=80, marker="*", label="cuts", color="red")
 
     ax.tick_params(labelsize=14)
-    ax.set_xlabel('FPR', fontsize=20)
-    ax.set_ylabel('TPR', fontsize=20)
+    ax.set_xlabel("FPR", fontsize=20)
+    ax.set_ylabel("TPR", fontsize=20)
     ax.set_xlim(0, .3)
     ax.set_ylim(.9, 1)
-    ax.legend(loc='best',fontsize=14)
+    ax.legend(loc="best", fontsize=14)
 
     return ax
-

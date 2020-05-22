@@ -1,4 +1,5 @@
-import tensorflow as tf  #TODO specify imported stuff
+from tensorflow import constant as tfconst
+from tensorflow import transpose as tftrans
 from .. import operations as ndops
 from copy import deepcopy
 
@@ -30,7 +31,7 @@ class TrackPropertiesDataset:
     """
 
     def __init__(self, track_prop_dict, label_property,
-            active_data_properties=None, prediction_dict={}):
+                 active_data_properties=None, prediction_dict={}):
         """Initializes this TrackPropertiesDataset with its track
         properties dict, its access settings, and predictions, if any.
 
@@ -74,37 +75,37 @@ class TrackPropertiesDataset:
 
         if self.get_label_property() != other.get_label_property():
             raise ValueError("Chosen label properties do not match.")
-        if self.get_active_data_properties()\
+        if self.get_active_data_properties() \
                 != other.get_active_data_properties():
             raise ValueError("Active data properties do not match.")
-        if self.get_available_data_properties()\
+        if self.get_available_data_properties() \
                 != other.get_available_data_properties():
             raise ValueError("Available data properties do not match.")
-        if self.get_all_prediction_names()\
+        if self.get_all_prediction_names() \
                 != other.get_all_prediction_names():
             raise ValueError("Available prediction names do not match.")
 
         return TrackPropertiesDataset(
-                ndops.add_track_prop_dicts(
-                    [self._track_prop_dict, other.track_prop_dict]),
-                self._label_property,
-                other.active_data_properties,
-                ndops.add_track_prop_dicts(
-                    [self._predictions, other._predictions]))
+            ndops.add_track_prop_dicts(
+                [self._track_prop_dict, other.track_prop_dict]),
+            self._label_property,
+            other.active_data_properties,
+            ndops.add_track_prop_dicts(
+                [self._predictions, other._predictions]))
 
     def __eq__(self, other):
         """Determines whether two TrackPropertiesDatasets have the same
         active properties, label properties, available data, and
         available predictions."""
 
-        return type(self) == type(other) and\
-                self.get_label_property() == other.get_label_property() and\
-                self.get_active_data_properties()\
-                    == other.get_active_data_properties() and\
-                self.to_track_prop_dict(include_preds=True)\
-                    == other.to_track_prop_dict(include_preds=True)
+        return isinstance(self, type(other)) and \
+               self.get_label_property() == other.get_label_property() and \
+               self.get_active_data_properties() \
+               == other.get_active_data_properties() and \
+               self.to_track_prop_dict(include_preds=True) \
+               == other.to_track_prop_dict(include_preds=True)
 
-    def __ne__ (self, other):
+    def __ne__(self, other):
         """Returns whether two TrackPropertiesDatasets are unequal,
         defined by negating __eq__."""
 
@@ -115,8 +116,8 @@ class TrackPropertiesDataset:
         the dataset. If active is True, return the number of "active"
         degrees of freedom."""
 
-        return len(self.get_active_data_properties()) if just_active_data\
-                else len(self.get_available_data_properties())
+        return len(self.get_active_data_properties()) if just_active_data \
+            else len(self.get_available_data_properties())
 
     def size(self):
         """Returns the number of tracks in this dataset."""
@@ -147,14 +148,15 @@ class TrackPropertiesDataset:
             track_properties = self.get_active_data_properties()
         else:
             for track_property in track_properties:
-                if track_property not in\
+                if track_property not in \
                         self.get_available_data_properties():
                     raise ValueError("Provided track property {} not available"
-                            "in this dataset.".format(track_property))
+                                     "in this dataset.".format(track_property))
 
-        return tf.transpose(tf.constant(list(map(lambda track_property:
-            self._track_prop_dict[track_property],
-            track_properties))))
+        return tftrans(tfconst(list(map(lambda track_property:
+                                                 self._track_prop_dict[
+                                                     track_property],
+                                                 track_properties))))
 
     def get_active_data_properties(self):
         """Returns a list of the current active data properties in this
@@ -187,7 +189,7 @@ class TrackPropertiesDataset:
         for track_property in track_properties:
             if track_property not in self.get_available_data_properties():
                 raise ValueError("Provided track property {} not available"
-                        "in this dataset.".format(track_property))
+                                 "in this dataset.".format(track_property))
 
         self._active_data_properties = track_properties
 
@@ -196,7 +198,7 @@ class TrackPropertiesDataset:
     def get_labels(self):
         """Return a tensor list of this dataset's labels."""
 
-        return tf.constant(self._track_prop_dict[self._label_property])
+        return tfconst(self._track_prop_dict[self._label_property])
 
     def get_label_property(self):
         """Return this dataset's label property."""
@@ -216,19 +218,19 @@ class TrackPropertiesDataset:
 
         if track_property not in self.get_available_data_properties():
             raise ValueError("Provided track property " + track_property +
-                    "not found in this dataset.")
+                             "not found in this dataset.")
 
         self._label_property = track_property
 
     # PREDICTIONS
 
     def get_all_predictions(self):
-        """Returns a dict from label names to tensor lists of predicted
+        """Returns a dict from label names to lists of predicted
         labels."""
 
         return dict(map(lambda pred_name:
-            (pred_name, self.get_prediction(pred_name)),
-            self.get_all_prediction_names()))
+                        (pred_name, self.get_prediction(pred_name)),
+                        self.get_all_prediction_names()))
 
     def get_all_prediction_names(self):
         """Returns a list of names of all predictions in this
@@ -237,13 +239,13 @@ class TrackPropertiesDataset:
         return list(self._predictions.keys())
 
     def get_prediction(self, pred_name):
-        """Returns a list of predicted labels as a tensor list.
+        """Returns a list of predicted labels as a list.
 
         Args:
             pred_name: the name of a prediction.
 
         Returns:
-            A tensor of predicted labels.
+            A list of predicted labels.
 
         Raises:
             ValueError: if the given pred_name does not correspond to a
@@ -252,9 +254,9 @@ class TrackPropertiesDataset:
 
         if pred_name not in self.get_all_prediction_names():
             raise ValueError("{} is not a prediction in this dataset."
-                    .format(pred_name))
+                             .format(pred_name))
 
-        return tf.constant(self._predictions[pred_name])
+        return self._predictions[pred_name]
 
     def add_prediction(self, pred_name, pred_labels):
         """Adds a list of predictions to this model accessible by a
@@ -270,8 +272,8 @@ class TrackPropertiesDataset:
 
         if len(pred_labels) != self.size():
             raise ValueError("Given prediction list has different number of "
-                    "elements ({}) than the number in this dataset ({})"
-                    .format(len(pred_labels), len(self.size())))
+                             "elements ({}) than the number in this dataset ({})"
+                             .format(len(pred_labels), len(self.size())))
 
         self._predictions.update({pred_name: pred_labels})
 
@@ -294,14 +296,14 @@ class TrackPropertiesDataset:
         """
 
         indices_to_cut = ndops.select_indices(
-                self._track_prop_dict, selector_dict)
+            self._track_prop_dict, selector_dict)
         return TrackPropertiesDataset(
-                ndops.cut_track_prop_dict_by_indices(
-                    self._track_prop_dict, indices_to_cut),
-                self.get_label_property(),
-                self.get_active_data_properties(),
-                ndops.cut_track_prop_dict_by_indices(
-                    self._predictions, indices_to_cut))
+            ndops.cut_track_prop_dict_by_indices(
+                self._track_prop_dict, indices_to_cut),
+            self.get_label_property(),
+            self.get_active_data_properties(),
+            ndops.cut_track_prop_dict_by_indices(
+                self._predictions, indices_to_cut))
 
     def split(self, split_list):
         """Returns datasets of number and relative sizes of elements as
@@ -319,17 +321,17 @@ class TrackPropertiesDataset:
         """
 
         split_tpds = ndops.split_track_prop_dict(self._track_prop_dict,
-                split_list)
+                                                 split_list)
 
         split_preds = ndops.split_track_prop_dict(self._predictions,
-                split_list)
+                                                  split_list)
 
         return list(map(lambda split_tpd, split_preds:
-            TrackPropertiesDataset(split_tpd,
-                self.get_label_property(),
-                self.get_active_data_properties(),
-                split_preds),
-            split_tpds, split_preds))
+                        TrackPropertiesDataset(split_tpd,
+                                               self.get_label_property(),
+                                               self.get_active_data_properties(),
+                                               split_preds),
+                        split_tpds, split_preds))
 
     # OTHER
 
@@ -351,4 +353,3 @@ class TrackPropertiesDataset:
             return tpd_to_return
         else:
             return deepcopy(self._track_prop_dict)
-

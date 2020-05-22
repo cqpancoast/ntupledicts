@@ -29,7 +29,7 @@ def make_neuralnet(train_dataset, eval_dataset=None,
     linear_model = Sequential()
     hidden_layer_sizes = iter(hidden_layers)
     linear_model.add(Dense(next(hidden_layer_sizes),
-        input_dim=train_dataset.get_data_dim()))
+                           input_dim=train_dataset.get_data_dim()))
     for layer_size in hidden_layer_sizes:
         linear_model.add(Dense(layer_size, activation="relu"))
     linear_model.add(Dense(classifier_order, activation="sigmoid"))
@@ -41,8 +41,8 @@ def make_neuralnet(train_dataset, eval_dataset=None,
 
     # Train loop
     steps_per_epoch = train_dataset.size() / epochs
-    validation_data = None if eval_dataset is None\
-            else (eval_dataset.get_data(), eval_dataset.get_labels())
+    validation_data = None if eval_dataset is None \
+        else (eval_dataset.get_data(), eval_dataset.get_labels())
     linear_model.fit(train_dataset.get_data(), train_dataset.get_labels(),
                      validation_data=validation_data,
                      steps_per_epoch=steps_per_epoch,
@@ -70,7 +70,6 @@ def make_gbdt(train_dataset, n_estimators=100, max_depth=3, random_state=23):
         max_depth=max_depth,
         random_state=random_state)
     gbdt.fit(train_dataset.get_data().numpy(),
-            train_dataset.get_labels().numpy())
+             train_dataset.get_labels().numpy())
 
     return gbdt
-
