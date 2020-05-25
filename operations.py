@@ -75,8 +75,8 @@ def add_track_prop_dicts(track_prop_dicts):
             raise ValueError("Track property dictionaries with differing "
                     "properties cannot be added.")
 
-        return dict(map(lambda property, vals_so_far, vals_to_add:
-            (property, vals_so_far + vals_to_add),
+        return dict(map(lambda track_property, vals_so_far, vals_to_add:
+            (track_property, vals_so_far + vals_to_add),
             tp_so_far.keys(),
             list(tp_so_far.values()),
             list(tp_to_add.values())))
@@ -97,9 +97,9 @@ def uproot_ntuple_to_ntuple_dict(event_set, properties_by_track_type):
         An ntuple dict.
     """
 
-    return dict(map(lambda track_type, properties:
+    return dict(map(lambda track_type, track_properties:
         (track_type, uproot_ntuple_to_track_prop_dict(
-            event_set, track_type, properties)),
+            event_set, track_type, track_properties)),
         properties_by_track_type.keys(), properties_by_track_type.values()))
 
 
@@ -111,22 +111,23 @@ def uproot_ntuple_to_track_prop_dict(event_set, track_type, track_properties):
 
     Args:
         event_set: an uproot event set.
-        track_type: trk, matchtrk, etc.
-        track_properties: pt, eta, pdgid, etc.
+        track_type: a track type string. "trk", "matchtrk", etc.
+        track_properties: a list of track property strings. "pt",
+            "eta", "pdgid", etc.
 
     Returns:
         A track properties dict.
     """
 
-    def get_property_list(track_property):
-        """Returns the list of properties corresponding to the event set,
-        track type, and property name."""
+    def get_value_list(track_property):
+        """Returns the value list corresponding to the event set, track
+        type, and property name."""
 
         return list(event_set[track_type + "_" + track_property]
                     .array().flatten())
 
     return dict(map(lambda track_property:
-                    (track_property, get_property_list(property)),
+                    (track_property, get_value_list(track_property)),
                     track_properties))
 
 
@@ -285,7 +286,7 @@ def shuffle_track_prop_dict(track_prop_dict, shuffled_indices=None, seed=None):
         track_prop_dict.keys(), track_prop_dict.values()))
 
 
-def reduce_ntuple_dict(ntuple_dict, track_limit=10,
+def reduce_ntuple_dict(ntuple_dict, track_limit,
                        shuffle_tracks=False, seed=None):
     """Reduces an ntuple dictionary to a number of tracks. If number of
     tracks in the ntuple is less than the track limit specified, returns
@@ -320,7 +321,7 @@ def reduce_ntuple_dict(ntuple_dict, track_limit=10,
         ntuple_dict.keys(), ntuple_dict.values()))
 
 
-def reduce_track_prop_dict(track_prop_dict, track_limit=10, min_index=0,
+def reduce_track_prop_dict(track_prop_dict, track_limit, min_index=0,
                            shuffle_tracks=True, seed=None):
     """Reduces a track properties dictionary such that each of its value
     lists are only a certain length. Does not affect the original track
@@ -413,12 +414,15 @@ def select(*selector_key, invert=False):
             selector = lambda val: any(map(
                 lambda sub_selector: sub_selector(val),
                 key_contents))
-        else:
+        elif isinstance(key_contents, (float, int)):
             selector = lambda val: val == next(iter(selector_key))
+        else:
+            raise ValueError("Invalid selector key type: {}."
+                    .format(type(key_contents)))
     elif len(selector_key) == 2:
         selector = lambda val: selector_key[0] <= val <= selector_key[1]
     else:
-        raise ValueError("Invalid selector key: {}. Read the docs!"
+        raise ValueError("Invalid selector key length: {}. Read the docs!"
                          .format(selector_key))
 
     return lambda val: invert != selector(val)
@@ -505,8 +509,8 @@ def select_indices(track_prop_dict, tpd_selector, invert=True):
     # Determine which selection conditions will be applied
     for track_property in list(tpd_selector.keys()):
         if track_property not in track_prop_dict.keys():
-            print(track_property + " not in tracks properties;"
-                                   "will not select")
+            print("{} not in tracks properties; will not select"
+                    .format(track_property))
             tpd_selector.pop(track_property)
 
     def index_meets_selection(track_index):
@@ -688,9 +692,8 @@ def take_measure_by_bin(track_prop_dict, bin_property, measure, bins=30):
         measure(cut_track_prop_dict(track_prop_dict,
             # Select values in range lower_bin to upper_bin, but exclude values
             # equal to upper_bin
-            {bin_property: select([select(lower_bin, upper_bin),
-                                   select([select(upper_bin)],
-                                          invert=True)])})),
+            {bin_property: lambda val: select(lower_bin, upper_bin)(val) and
+                select([select(upper_bin)], invert=True)})),
         bins[:-1], bins[1:]))
 
     return bins, bin_heights

@@ -21,7 +21,8 @@ that, here are the dependencies so far:
 
 - `tensorflow 2.0.0` or above for machine learning
 - `sklearn` for more machine learning
-- `uproot` to read in the ROOT ntuples
+- `uproot` to read in the ROOT ntuples. You won't need this to run ntupledicts directly,
+but is is required in the workflow to produce the right kind of input for ntupledicts.
 
 Note that this package does not depend upon any particular version of CMSSW
 or have any requirements for track properties in the imported ntuples.

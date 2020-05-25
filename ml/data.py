@@ -337,7 +337,8 @@ class TrackPropertiesDataset:
 
     def to_track_prop_dict(self, include_preds=False):
         """Converts this TrackPropertiesDataset to a track properties
-        dict, with or without labeled predictions.
+        dict, with or without labeled predictions. Includes all
+        available track properties, not just active data properties.
 
         Args:
             include_preds: if True, include predictions in the returned
