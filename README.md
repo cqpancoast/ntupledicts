@@ -35,7 +35,7 @@ from track properties ("eta", "chi2", "nmatch") to lists of properties. (These
 smaller dicts within the ntuple dicts are called "**track property dicts**".)
 For example, a simple **ntuple dict** might look like this:
 
-```
+```python
 {"trk": {"pt": [1, 2, 3], "eta": [0, 2.2, 1.1]}, "tp": {"nmatch": ...}}
 ```
 
@@ -44,7 +44,7 @@ In the code, the lists of track property values are called **value lists**.
 
 The whole formula looks about like this:
 
-```
+```python
 val_list = ntuple_dict[track_type][track_property]
 track_prop_dict = ntuple_dict[track_type]
 val_list = track_prop_dict[track_property]
@@ -60,7 +60,7 @@ property dict in the first place*.
 
 Here's a sample of code where I make an **ntuple dict** from root ntuples:
 
-```
+```python
 # Open ntuples
 event_sets = []
 for input_file in input_files:
@@ -77,18 +77,20 @@ ntuple_dict = ndops.ntuples_to_ntuple_dict(event_sets, properties_by_track_type)
 
 ### Applying cuts to an ntuple dictionary
 
-(`from ntupledicts.operations import select as sel`)
+```python
+from ntupledicts.operations import select as sel
+```
 
 Now, say I want to apply some cuts to the **ntuple dict**. Cuts are performed using objects called **selectors**, functions which take in a value and spit out true or false.
 For example, a **selector** might be:
 
-```
+```python
 lambda eta: eta <= 2.4 and eta => -2.4
 ```
 
 However, there's a convenient function in the `ntupledicts.operations` library that transforms that into this:
 
-```
+```python
 sel(-2.4, 2.4)
 ```
 
@@ -97,7 +99,7 @@ format as **ntuple dicts** and **track properties dicts**, but replace their val
 
 So, to apply a cut to tracking particles in an **ntuple dict**, I'd do this:
 
-```
+```python
 from ntupledicts.operations import select as sel
 from ntupledicts.operations import cut_ntuple
 
@@ -111,7 +113,7 @@ This is shown above in the case of eventid.
 To logical `AND` with **selector**s, simply apply two **selector**s.
 To logical `OR`, pass your desired **selector**s to logical `OR` into `sel` as a list, like so:
 
-```
+```python
 sel([sel(0), sel(1, 4)])
 ```
 
@@ -144,13 +146,15 @@ Contained in `ntupledicts.ml` is everything you'll need to make a machine learni
 
 ### Data
 
-(`from ntupledicts.ml.data import TrackPropertiesDataset`)
+```python
+from ntupledicts.ml.data import TrackPropertiesDataset
+```
 
 All data is stored in a `TrackPropertiesDataset`, which is essentially a track
 properties dict with some ML-focus functionality.
 It separates the data contained in an input track properties dict into data and labels, in accordance with standard machine learning practice.
 
-```
+```python
 tpd = ntupledict["trk"]  # make a track properties dict
 tpd.keys()  # ["pt", "eta", "nmatch", "genuine"]
 active_data_properties = ["pt", "eta"]  # set pt and eta as data to train on
@@ -166,7 +170,7 @@ The label property and the active data property can also be set in an already in
 
 To get the active data and labels, simply run:
 
-```
+```python
 tpds.get_data()  # Tensorflow array of data
 tpds.get_labels()  # Tensorflow array of labels
 tpds.get_data(["pt", "nstub"])  # Tensorflow array of only pt and nstub data
@@ -175,7 +179,7 @@ tpds.get_data(["pt", "nstub"])  # Tensorflow array of only pt and nstub data
 
 ### Models
 
-```
+```python
 from ntupledicts.ml.models import make_neuralnet
 from ntupledicts.ml.models import make_gbdt
 ```
@@ -183,7 +187,7 @@ from ntupledicts.ml.models import make_gbdt
 There are some convenient wrapper functions for common networks.
 For example, for a tensorflow neural network, rather than building it yourself, you can simply specify hidden layers:
 
-```
+```python
 NN = make_neuralnet(train_ds, validation_data=eval_ds, hidden_layers=[14, 6], epochs=10)
 GBDT = ndmlmodels.make_gbdt(train_ds)
 ```
@@ -193,31 +197,33 @@ However, you are by no means restricted to using these functions to create your 
 
 ### Prediction
 
-(`import ntupledicts.ml.predict as ndmlpred`)
+```python
+import ntupledicts.ml.predict as ndmlpred
+```
 
 Just like there are wrappers to create models, there are also wrappers to run them on data. These will create lists of probabilities of label predictions.
 
-```
+```python
 pred_labels = ndmlpred.predict_labels(GBDT, test_ds.get_data())
 ```
 
 `TrackPropertiesDataset`s are capable of storing predictions, previous ones of which can be accessed by label like so:
 
-```
+```python
 test_ds.add_prediction("NN", ndmlpred.predict_labels(NN, test_ds.get_data()))
 test_ds.get_prediction("NN")  # Tensorflow array of labels predicted by model NN
 ```
 
 There is also support for having a selector (or, in common speak, a set of cuts) predict labels. This is done like so:
 
-```
+```python
 some_track_property = "pt"  # a track property to cut on
 some_selector = sel(0, 10)  # only accept values between zero and ten
 cut_pred_labels = ndmlpred.predict_labels_cuts({some_track_property: some_selector})
   # returns a list of 1's corresponding to tracks with pts below 10, 0's above
 ```
 
-`ndmlpred` also has functions `true_positive_rate()` and `false_positive_rate()` (or `tpr` and `fpr`) that calculate exactly what you'd expect if given a threshhold value to turn probablistic predictions into binary predictions. 
+`ndmlpred` also has functions `true_positive_rate()` and `false_positive_rate()` (or `tpr` and `fpr`) that calculate exactly what you'd expect if given a threshhold value to turn probablistic predictions into binary predictions.
 These functions are used often in the plots below.
 
 
