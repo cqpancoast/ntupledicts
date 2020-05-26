@@ -5,7 +5,7 @@ from .operations import select as sel
 
 def plot_roc_curve_from_cut_list(ntuple_dict, cut_property, cuts,
                                  cuts_constricting=True, group_name=None,
-                                 ax=plt.figure().add_subplot(111)):
+                                 ax=None):
     """Adjusts the cut on a certain variable in an event set and plots
     the change in tracking efficiency and fake rate.
 
@@ -28,6 +28,9 @@ def plot_roc_curve_from_cut_list(ntuple_dict, cut_property, cuts,
     Returns:
         The axes object used to plot this graph.
     """
+
+    if ax is None:
+        ax = plt.figure().add_subplot(111)
 
     # Build up cuts plot info, which is what will be plotted
     cuts_plot_info = {"cut": [], "eff": [], "fake_rate": []}
@@ -63,8 +66,7 @@ def plot_roc_curve_from_cut_list(ntuple_dict, cut_property, cuts,
 
 
 def plot_measure_by_bin(track_prop_dict, bin_property, measure,
-                        bins=30, legend_id=None,
-                        ax=plt.figure().add_subplot(111)):
+                        bins=30, legend_id=None, ax=None):
     """Splits a track property dict into bins by some value, then
     compute a measure on each binned track property dict.
 
@@ -86,6 +88,9 @@ def plot_measure_by_bin(track_prop_dict, bin_property, measure,
         and overlaying data.
     """
 
+    if ax is None:
+        ax = plt.figure().add_subplot(111)
+
     bins, bin_heights = ndops.take_measure_by_bin(track_prop_dict,
                                                   bin_property, measure, bins)
     bin_middles = list(map(lambda lower, upper: (lower + upper) / 2,
@@ -97,8 +102,7 @@ def plot_measure_by_bin(track_prop_dict, bin_property, measure,
     return ax
 
 
-def plot_property_hist(track_prop_dict, track_property, bins=30,
-                       ax=plt.figure().add_subplot(111)):
+def plot_property_hist(track_prop_dict, track_property, bins=30, ax=None):
     """Plot a histogram distribution of a track property in a track
     properties dict.
 
@@ -116,6 +120,9 @@ def plot_property_hist(track_prop_dict, track_property, bins=30,
         A matplotlib.pyplot.Axes object for adjusting plot properties
         and overlaying data
     """
+
+    if ax is None:
+        ax = plt.figure().add_subplot(111)
 
     ax = plot_measure_by_bin(track_prop_dict, track_property,
                              lambda tpd: len(tpd[track_property]), bins, ax)

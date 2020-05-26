@@ -7,7 +7,7 @@ from . import predict as mlpred
 
 def plot_pred_comparison_by_track_property(dataset, pred_name,
         pred_comparison, bin_property, bins=10, threshhold=.6,
-        legend_id=None, ax=plt.figure().add_subplot(111)):
+        legend_id=None, ax=None):
     """Compares true labels to the model predictions by some function,
     binned by a track property present in data.
 
@@ -32,6 +32,9 @@ def plot_pred_comparison_by_track_property(dataset, pred_name,
         The Axes object to be used to plot in this function.
     """
 
+    if ax is None:
+        ax = plt.figure().add_subplot(111)
+
     track_prop_dict = dataset.to_track_prop_dict(include_preds=True)
 
     def measure_pred_comparison(track_prop_dict):
@@ -48,7 +51,7 @@ def plot_pred_comparison_by_track_property(dataset, pred_name,
 
 def plot_pred_comparison_by_threshhold(dataset, pred_name,
         pred_comparison, threshholds=10, legend_id=None,
-        ax=plt.figure().add_subplot(111)):
+        ax=None):
     """Compares true labels to the model predictions by some function
     at various threshholds.
 
@@ -68,6 +71,9 @@ def plot_pred_comparison_by_threshhold(dataset, pred_name,
         The axes object to used to plot in this function.
     """
 
+    if ax is None:
+        ax = plt.figure().add_subplot(111)
+
     # Generate threshhold list if threshholds is not a list
     if not isinstance(threshholds, list):
         threshholds = linspace(0, 1, threshholds)
@@ -81,36 +87,38 @@ def plot_pred_comparison_by_threshhold(dataset, pred_name,
     return ax
 
 
-def plot_rocs(dataset, models, model_names, cuts=[]):
+def plot_rocs(dataset, prob_pred_names=[], def_pred_names=[],
+              xlims=(0, .3), ylims=(.9, 1)):
     """Create ROC curves through true positive rate / false positive
-    rate space for different models by changing the cut on model-
-    generated predications. Optionally, plot these against a set of
-    cuts. Note that this only works if the label is from a binary
-    classifier such as trk_genuine.
+    rate space for different models by changing the cut on predictions.
+    Note that this only works if the label is from a binary classifier
+    such as trk_genuine.
 
     Args:
         dataset: a TrackPropertiesDataset containing the data, labels,
-            and corresponding property names for both
-        models: a list of models with predictive capabilites
-        model_names: the names of the models for the plot legend
-        cuts: an optional list of selector dictionaries to apply to
-            the data to predict the binary variable in question
+            and corresponding property names for both.
+        prob_pred_names: names of probablistic predictions accessible
+            from dataset. Typically the names of the models that made
+            them. Will be plotted as a curve.
+        def_pred_names: names of pre-threshholded predictions
+            accessible from the dataset. This is what is used for cut-
+            generated predictions. Plotted as a point.
     """
 
     ax = plt.figure().add_subplot(111)
 
     # Plot ROC curve for models
-    for model, model_name in zip(models, model_names):
-        pred_prob_labels = mlpred.predict_labels(model, dataset.get_data())
+    for prob_pred_name in prob_pred_names:
+        pred_prob_labels = dataset.get_prediction(prob_pred_name)
         fpr, tpr, _ = roc_curve(dataset.get_labels(), pred_prob_labels)
         auc = roc_auc_score(dataset.get_labels(), pred_prob_labels)
         auc_string = " ({})".format(str(round(auc, 3)))
-        ax.plot(fpr, tpr, label=model_name+auc_string,
+        ax.plot(fpr, tpr, label=prob_pred_name+auc_string,
                 linewidth=2)
 
     # Plot cuts, if any are given
-    for cut in cuts:
-        pred_labels = mlpred.predict_labels_cuts(cut, dataset)
+    for def_pred_name in def_pred_names:
+        pred_labels = dataset.get_prediction(def_pred_name)
         fpr_cut = mlpred.false_positive_rate(dataset.get_labels(), pred_labels)
         tpr_cut = mlpred.true_positive_rate(dataset.get_labels(), pred_labels)
         ax.scatter(fpr_cut, tpr_cut,
@@ -119,8 +127,8 @@ def plot_rocs(dataset, models, model_names, cuts=[]):
     ax.tick_params(labelsize=14)
     ax.set_xlabel("FPR", fontsize=20)
     ax.set_ylabel("TPR", fontsize=20)
-    ax.set_xlim(0, .3)
-    ax.set_ylim(.9, 1)
+    ax.set_xlim(xlims)
+    ax.set_ylim(ylims)
     ax.legend(loc="best", fontsize=14)
 
     return ax

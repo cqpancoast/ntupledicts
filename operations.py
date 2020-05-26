@@ -521,7 +521,7 @@ def select_indices(track_prop_dict, tpd_selector, invert=True):
             property_selector(track_prop_dict[track_property][track_index]),
             tpd_selector.keys(), tpd_selector.values())))
 
-    track_indices = range(len(next(iter(track_prop_dict.values()))))
+    track_indices = range(track_prop_dict_length(track_prop_dict))
     return list(filter(lambda track_index:
             invert != index_meets_selection(track_index),
             track_indices))
