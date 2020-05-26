@@ -81,6 +81,7 @@ def plot_measure_by_bin(track_prop_dict, bin_property, measure,
             form (low_bound, high_bound, num_bins), or a list of
             numbers. See ntupledict.operations.make_bins() for info.
         legend_id: the entry in the legend for the line to be plotted.
+            Calling ax.legend() should be done outside this function.
         ax: an axes object to overlay this data onto a previous plot.
 
     Returns:
@@ -102,7 +103,8 @@ def plot_measure_by_bin(track_prop_dict, bin_property, measure,
     return ax
 
 
-def plot_property_hist(track_prop_dict, track_property, bins=30, ax=None):
+def plot_property_hist(track_prop_dict, track_property, bins=30,
+                       legend_id=None, ax=None):
     """Plot a histogram distribution of a track property in a track
     properties dict.
 
@@ -114,6 +116,8 @@ def plot_property_hist(track_prop_dict, track_property, bins=30, ax=None):
         bins: either an int for the number of bins, a 3-tuple of the
             form (low_bound, high_bound, num_bins), or a list of
             numbers. See ntupledict.operations.make_bins() for info
+        legend_id: the entry in the legend for the line to be plotted.
+            Calling ax.legend() should be done outside this function.
         ax: an axes object to overlay this data onto a previous plot
 
     Returns:
@@ -125,7 +129,8 @@ def plot_property_hist(track_prop_dict, track_property, bins=30, ax=None):
         ax = plt.figure().add_subplot(111)
 
     ax = plot_measure_by_bin(track_prop_dict, track_property,
-                             lambda tpd: len(tpd[track_property]), bins, ax)
+                             lambda tpd: len(tpd[track_property]),
+                             bins, legend_id, ax)
     ax.set_ylabel("num. tracks")
     ax.set_title("Histrogram of {}".format(track_property))
 

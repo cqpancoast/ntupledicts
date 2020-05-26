@@ -224,7 +224,7 @@ cut_pred_labels = ndmlpred.predict_labels_cuts({some_track_property: some_select
   # returns a list of 1's corresponding to tracks with pts below 10, 0's above
 ```
 
-`ndmlpred` also has functions `true_positive_rate()` and `false_positive_rate()` (or `tpr` and `fpr`) that calculate exactly what you'd expect if given a threshhold value to turn probablistic predictions into binary predictions.
+`ndmlpred` also has functions `true_positive_rate()` and `false_positive_rate()` (or `tpr` and `fpr`) that calculate exactly what you'd expect if given a threshold value to turn probablistic predictions into binary predictions.
 These functions are used often in the plots below.
 
 

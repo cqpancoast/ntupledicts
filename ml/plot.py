@@ -6,7 +6,7 @@ from . import predict as mlpred
 
 
 def plot_pred_comparison_by_track_property(dataset, pred_name,
-        pred_comparison, bin_property, bins=10, threshhold=.6,
+        pred_comparison, bin_property, bins=10, threshold=.6,
         legend_id=None, ax=None):
     """Compares true labels to the model predictions by some function,
     binned by a track property present in data.
@@ -15,7 +15,7 @@ def plot_pred_comparison_by_track_property(dataset, pred_name,
         dataset: a TrackPropertiesDataset.
         pred_name: the name of a prediction to be found in dataset
         pred_comparison: a function that takes in the labels, the
-            predicted labels, and a threshhold value, and returns a
+            predicted labels, and a threshold value, and returns a
             number measuring some property of the predicted labels'
             relation to the actual ones.
         bin_property: a property in data_properties or the
@@ -23,9 +23,10 @@ def plot_pred_comparison_by_track_property(dataset, pred_name,
         bins: either an int for the number of bins, a 3-tuple of the
             form (low_bound, high_bound, num_bins), or a list of
             numbers. See ntupledict.operations.make_bins() for info.
-        threshhold: the limit at which a prediction signifies one or
+        threshold: the limit at which a prediction signifies one or
             the other value of a binary classification,
         legend_id: the entry in the legend for the line to be plotted.
+            Calling ax.legend() should be done outside this function.
         ax: an axes object to be used to plot in this function.
 
     Returns:
@@ -43,28 +44,29 @@ def plot_pred_comparison_by_track_property(dataset, pred_name,
 
         return pred_comparison(track_prop_dict[dataset.get_label_property()],
                 track_prop_dict[pred_name],
-                threshhold)
+                threshold)
 
     return ndplot.plot_measure_by_bin(track_prop_dict, bin_property,
             measure_pred_comparison, bins, legend_id, ax)
 
 
-def plot_pred_comparison_by_threshhold(dataset, pred_name,
-        pred_comparison, threshholds=10, legend_id=None,
+def plot_pred_comparison_by_threshold(dataset, pred_name,
+        pred_comparison, thresholds=10, legend_id=None,
         ax=None):
     """Compares true labels to the model predictions by some function
-    at various threshholds.
+    at various thresholds.
 
     Args:
         dataset: a TrackPropertiesDataset.
         pred_name: the name of a prediction to be found in dataset.
         pred_comparison: a function that takes in the labels, the
-            predicted labels, and a threshhold value, and returns a
+            predicted labels, and a threshold value, and returns a
             number measuring some property of the predicted labels'
             relation to the actual ones.
-        threshholds: the limits at which a prediction signifies one or
+        thresholds: the limits at which a prediction signifies one or
             the other value of a binary classification.
         legend_id: the entry in the legend for the line to be plotted.
+            Calling ax.legend() should be done outside this function.
         ax: an axes object to be used to plot in this function.
 
     Returns:
@@ -74,15 +76,15 @@ def plot_pred_comparison_by_threshhold(dataset, pred_name,
     if ax is None:
         ax = plt.figure().add_subplot(111)
 
-    # Generate threshhold list if threshholds is not a list
-    if not isinstance(threshholds, list):
-        threshholds = linspace(0, 1, threshholds)
+    # Generate threshold list if thresholds is not a list
+    if not isinstance(thresholds, list):
+        thresholds = linspace(0, 1, thresholds)
 
-    ax.scatter(threshholds, list(map(lambda threshhold:
+    ax.scatter(thresholds, list(map(lambda threshold:
         pred_comparison(dataset.get_labels(),
-            dataset.get_prediction(pred_name), threshhold),
-        threshholds)), label=legend_id)
-    ax.set_xlabel("Decision Threshhold")
+            dataset.get_prediction(pred_name), threshold),
+        thresholds)), label=legend_id)
+    ax.set_xlabel("Decision threshold")
 
     return ax
 
@@ -100,7 +102,7 @@ def plot_rocs(dataset, prob_pred_names=[], def_pred_names=[],
         prob_pred_names: names of probablistic predictions accessible
             from dataset. Typically the names of the models that made
             them. Will be plotted as a curve.
-        def_pred_names: names of pre-threshholded predictions
+        def_pred_names: names of pre-thresholded predictions
             accessible from the dataset. This is what is used for cut-
             generated predictions. Plotted as a point.
     """

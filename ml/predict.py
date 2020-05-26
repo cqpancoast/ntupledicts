@@ -10,18 +10,18 @@ def check_pred_labels_size(labels, pred_labels):
         raise ValueError("Predicted labels size differs from labels size")
 
 
-def apply_threshhold(pred_prob_labels, threshhold):
-    """Sends every prediction in the list below the threshhold
+def apply_threshold(pred_prob_labels, threshold):
+    """Sends every prediction in the list below the threshold
     (exclusive) to zero and everything above it (inclusive) to one.
     In the parlance of this file, turns predicted probablistic labels
     into predicted labels. Returns a list."""
 
-    return list(map(lambda pred: 1 if pred >= threshhold else 0,
+    return list(map(lambda pred: 1 if pred >= threshold else 0,
         pred_prob_labels))
 
 
 def pred_proportion_given_truth_case(labels, pred_labels,
-        labels_restriction, pred_labels_case, threshhold=.6):
+        labels_restriction, pred_labels_case, threshold=.6):
     """Look at the relative proportion of a value of the predicted
     probability labels, looking only at values who match to an acutal
     label of a particular case.
@@ -32,13 +32,13 @@ def pred_proportion_given_truth_case(labels, pred_labels,
         labels: a list of true binary classifer labels
         pred_labels: a list of predicted binary classifier labels,
             OR a list of probablistic predictions to be converted to
-            exact predictions using the threshhold
+            exact predictions using the threshold
         labels_restriction: a function returning true for values of the
             label case to which the domain should be restricted
         pred_labels_case: a function returning true for values to count
             part of the proportion in the prediction with restricted
             domain
-        threshhold: a threshhold to apply to the probablistic data
+        threshold: a threshold to apply to the probablistic data
             before computing the agreement. Assumes binary classifier
 
     Returns:
@@ -63,14 +63,14 @@ def pred_proportion_given_truth_case(labels, pred_labels,
         label_and_pred["pred"],
         labels_and_preds_restricted_domain))
 
-    pred_labels_threshholded_rest_dom =\
-        apply_threshhold(pred_labels_restricted_domain, threshhold)
+    pred_labels_thresholded_rest_dom =\
+        apply_threshold(pred_labels_restricted_domain, threshold)
 
-    return ndops.get_proportion_selected(pred_labels_threshholded_rest_dom,
+    return ndops.get_proportion_selected(pred_labels_thresholded_rest_dom,
             pred_labels_case)
 
 
-def true_positive_rate(labels, pred_labels, threshhold=.6):
+def true_positive_rate(labels, pred_labels, threshold=.6):
     """For a binary classifier label, returns the proportion of "true"
     cases that the model predicted correctly. Throws an error if the
     lists are of different sizes.
@@ -79,8 +79,8 @@ def true_positive_rate(labels, pred_labels, threshhold=.6):
         labels: a list of binary classifier labels
         pred_labels: a list of predicted binary classifier labels,
             OR a list of probablistic predictions to be converted to
-            exact predictions using the threshhold
-        threshhold: a threshhold to apply to the probablistic data
+            exact predictions using the threshold
+        threshold: a threshold to apply to the probablistic data
 
     Returns:
         The proportion of "true" cases that a model predicted correctly
@@ -90,10 +90,10 @@ def true_positive_rate(labels, pred_labels, threshhold=.6):
     """
 
     return pred_proportion_given_truth_case(labels, pred_labels,
-            sel(1), sel(1), threshhold)
+            sel(1), sel(1), threshold)
 
 
-def false_positive_rate(labels, pred_labels, threshhold=.6):
+def false_positive_rate(labels, pred_labels, threshold=.6):
     """For a binary classifier label, returns the proportion of "false"
     cases that the model predicted were "true". Raises an error if the
     lists are of different sizes.
@@ -102,8 +102,8 @@ def false_positive_rate(labels, pred_labels, threshhold=.6):
         labels: a list of binary classifier labels
         pred_labels: a list of predicted binary classifier labels,
             OR a list of probablistic predictions to be converted to
-            exact predictions using the threshhold
-        threshhold: a threshhold to apply to the probablistic data
+            exact predictions using the threshold
+        threshold: a threshold to apply to the probablistic data
 
     Returns:
         The proportion of "false" cases that a model predicted "true"
@@ -113,13 +113,13 @@ def false_positive_rate(labels, pred_labels, threshhold=.6):
     """
 
     return pred_proportion_given_truth_case(labels, pred_labels,
-            sel(0), sel(1), threshhold)
+            sel(0), sel(1), threshold)
 
 
 def predict_labels(model, data):
     """Run the model on each element of a dataset and produce a list of
     probabilistic predictions (note: not logits). Assumes a binary
-    classifier. Does not apply a threshhold.
+    classifier. Does not apply a threshold.
 
     Args:
         model: a tensorflow or sklearn model capable of prediction
