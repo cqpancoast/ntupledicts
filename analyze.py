@@ -158,25 +158,41 @@ def eff_from_track_prop_dict(track_prop_dict_tp, selector_dict={}):
 
 
 class StubInfo(object):
-    """Converts eta and hitpattern into data about stubs. Accessible
-    data includes expected number of stubs, missing stubs, number of
-    PS and 2S modules expected, hit, missed, etc.
+    """Converts eta and hitpattern into data about stubs for a single
+    track.
+
+    The only directly accessible info from this class are boolean
+    lists, all of which are indexed by layer/disk:
+        - indices 0 - 5 in the lists correspond to layers 1 - 6.
+        - indices 6 - 10 in the list correspond to disks 1 - 5.
+    Any information you could want about stubs can be found from these
+    three lists, sum(), map(), and lambda.
+
+    For example, if I wanted to find the number of missing 2S layers:
+
+        def missing_2S_layers(stub_info):
+            return sum(map(lambda expected, hit, ps_2s:
+                            not ps_layer and expected and not hit,
+                            stub_info.get_expected(),
+                            stub_info.get_hit(),
+                            stub_info.get_ps_2s()))
+
+    Down below, there are convenience functions process_stub_info and
+    basic_process_stub_info for processing instances of this class.
 
     Note that these definitions are in accordance with the expected and
     missed definitions in the TrackTrigger's Kalman filter used to
     originally create hitpattern. One consequence of this is that there
-    will never be hit stub that was not expected."""
+    will never be hit stub that was not expected.
+    """
 
     def __init__(self, eta, hitpattern):
         """Stores expected, hit, and PS (False for 2S) as tuples of
-        boolean values. Indices 0 - 5 in the lists correspond to layers
-        1 - 6, while indices 6 - 10 in the list correspond to disks
-        1 - 5."""
+        boolean values."""
 
         self._gen_expected(abs(eta))
         self._gen_hit(hitpattern)
-        self._ps = (True, True, True, False, False, False,  # layers
-                    True, True, False, False, False)        # disks
+        self._gen_ps_2s(abs(eta))
 
     def _gen_expected(self, abseta):
         """Sets a tuple of boolean values indicating whether the
@@ -226,24 +242,87 @@ class StubInfo(object):
         hits_iter = gen_hits_iter(hitpattern, len(self._expected))
         self._hit = tuple(map(lambda expected:
             expected and next(hits_iter),
-            self._expected))
+            self.get_expected()))
+
+    def _gen_ps_2s(self, abseta):
+        """Generates a tuple indexed by layer for which each boolean
+        value represents whether a layer or disk is PS (True) or 2S
+        (False). This is necessary because a given disk has PS and 2S
+        modules, separated by eta."""
+
+        layer_ps_2s = 3 * (True,) + 3 * (False,)
+
+        disk_ps_2s_cuts = [1.45, 1.6, 1.8, 1.975, 2.15]
+            # ps above, 2s below
+        disk_ps_2s = tuple(map(lambda disk_ps_2s_cut:
+            abseta > disk_ps_2s_cut,
+            disk_ps_2s_cuts))
+
+        self._ps_2s = layer_ps_2s + disk_ps_2s
+
+    def get_expected(self):
+        """Returns a list of booleans representing which layers/disks
+        were expected to be hit by the Kalman filter."""
+
+        return list(self._expected)
+
+    def get_hit(self):
+        """Returns a list of booleans representing which layers/disks
+        were hit, within the layers/disks expected byt the Kalman
+        filter."""
+
+        return list(self._hit)
+
+    def get_ps_2s(self):
+        """Returns a list of booleans indexed by layer/disk indicating
+        if the layer or disk with that index is PS (True) or 2S
+        (False)."""
+
+        return list(self._ps_2s)
 
 
-def create_stub_info_list(track_prop_dict):
-    """Using eta and hitpattern, draws info about which layers in the
-    outer tracker were and weren't hit from a track properties dict.
+def create_stub_info_list(track_prop_dict, process_stub_info):
+    """Uses eta and hitpattern to generate a list of StubInfos from the
+    given track property dict. Then maps those StubInfos to something
+    else using some function.
 
     Args:
         track_prop_dict: a tracks properties dict with track properties
             eta and hitpattern. Must represent either trk or matchtrk,
             as only those have the hitpattern track property.
+        process_stub_info: a function or lambda expression that accepts
+            StubInfos.
 
     Returns:
-        A list of StubInfo objects, one for each track, from which all
-        stub data can be derived.
+        A list of processed StubInfos indexed by track.
     """
 
     return list(map(lambda eta, hitpattern:
-        StubInfo(eta, hitpattern),
+        process_stub_info(StubInfo(eta, hitpattern)),
         track_prop_dict["eta"], track_prop_dict["hitpattern"]))
+
+
+def basic_process_stub_info(process_layer):
+    """Returns a StubInfo processing function that is agnostic towards
+    layer indices, which means it should work for most cases.
+
+    For example, a function that determines how many missing 2S layers
+    are in a StubInfo would be:
+
+        basic_process_stub_info(lambda expected, hit, ps_2s:
+                                not ps_2s and expected and not hit)
+
+    Args:
+        process_layer: A function from a single layer's expected bool,
+        hit bool, and ps/2s bool (in that order) to a boolean.
+
+    Returns:
+        A function that accepts a StubInfo and counts for how many
+        layers process_layer returns True.
+    """
+
+    return lambda stub_info: sum(map(process_layer,
+                                     stub_info.get_expected(),
+                                     stub_info.get_hit(),
+                                     stub_info.get_ps_2s()))
 
