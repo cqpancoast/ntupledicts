@@ -5,6 +5,7 @@ from functools import reduce
 from math import inf
 from numpy import linspace
 from numpy import cumsum
+from warnings import warn
 
 
 def uproot_ntuples_to_ntuple_dict(event_sets, properties_by_track_type):
@@ -509,8 +510,8 @@ def select_indices(track_prop_dict, tpd_selector, invert=True):
     # Determine which selection conditions will be applied
     for track_property in list(tpd_selector.keys()):
         if track_property not in track_prop_dict.keys():
-            print("{} not in tracks properties; will not select"
-                    .format(track_property))
+            warn("{} not in tracks properties; will not select"
+                    .format(track_property), UserWarning)
             tpd_selector.pop(track_property)
 
     def index_meets_selection(track_index):

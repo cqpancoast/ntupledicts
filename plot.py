@@ -103,7 +103,7 @@ def plot_measure_by_bin(track_prop_dict, bin_property, measure,
     return ax
 
 
-def plot_property_hist(track_prop_dict, track_property, bins=30,
+def plot_property_bin_hist(track_prop_dict, track_property, bins=30,
                        legend_id=None, ax=None):
     """Plot a histogram distribution of a track property in a track
     properties dict.
@@ -135,3 +135,41 @@ def plot_property_hist(track_prop_dict, track_property, bins=30,
     ax.set_title("Histrogram of {}".format(track_property))
 
     return ax
+
+
+def plot_property_scatter(track_prop_dict, track_property, legend_id=None,
+        ax=None):
+    """Plot a scatter plot of a track property in a track properties
+    dict. Intended for track properties who take discrete values.
+
+    Args:
+        track_prop_dict: a track properties dict
+        track_property: a property in track_prop_dict that will split it
+            into bins. Preferably a continuous value, but no hard
+            restriction is made in this code
+        legend_id: the entry in the legend for the line to be plotted.
+            Calling ax.legend() should be done outside this function.
+        ax: an axes object to overlay this data onto a previous plot
+
+    Returns:
+        A matplotlib.pyplot.Axes object for adjusting plot properties
+        and overlaying data
+    """
+
+    if ax is None:
+        ax = plt.figure().add_subplot(111)
+
+    # Generate dict from values to number of occurences
+    val_list = track_prop_dict[track_property]
+    hist_dict = dict(map(lambda value:
+        (str(value), val_list.count(value)),
+        set(val_list)))
+
+    ax.scatter(hist_dict.keys(), hist_dict.values(), label=legend_id)
+    ax.set_yscale("log")  # we usually want log when we're counting
+    ax.set_xlabel(track_property)
+    ax.set_ylabel("number of tracks")
+    ax.set_title("Histogram of {}".format(track_property))
+
+    return ax
+
