@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from . import analyze as ndanl
 from . import operations as ndops
 from .operations import select as sel
 
@@ -44,9 +45,9 @@ def plot_roc_curve_from_cut_list(ntuple_dict, cut_property, cuts,
                                                 {"trk": tpd_selector,
                                                  "matchtrk": tpd_selector})
         cuts_plot_info["cut"].append(cut[1])  # only get upper bound of cut
-        cuts_plot_info["eff"].append(ndops.eff_from_ntuple_dict(
+        cuts_plot_info["eff"].append(ndanl.eff_from_ntuple_dict(
             cut_ntuple_dict["tp"]["pt"]))
-        cuts_plot_info["fake_rate"].append(ndops.get_proportion_selected(
+        cuts_plot_info["fake_rate"].append(ndanl.get_proportion_selected(
             cut_ntuple_dict["trk"]["genuine"], sel(0)))
 
     # Now plot!
@@ -92,7 +93,7 @@ def plot_measure_by_bin(track_prop_dict, bin_property, measure,
     if ax is None:
         ax = plt.figure().add_subplot(111)
 
-    bins, bin_heights = ndops.take_measure_by_bin(track_prop_dict,
+    bins, bin_heights = ndanl.take_measure_by_bin(track_prop_dict,
                                                   bin_property, measure, bins)
     bin_middles = list(map(lambda lower, upper: (lower + upper) / 2,
                            bins[:-1], bins[1:]))

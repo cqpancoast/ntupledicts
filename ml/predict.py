@@ -1,4 +1,5 @@
 from .. import operations as ndops
+from .. import analyze as ndanl
 from ..operations import select as sel
 
 
@@ -66,7 +67,7 @@ def pred_proportion_given_truth_case(labels, pred_labels,
     pred_labels_thresholded_rest_dom =\
         apply_threshold(pred_labels_restricted_domain, threshold)
 
-    return ndops.get_proportion_selected(pred_labels_thresholded_rest_dom,
+    return ndanl.get_proportion_selected(pred_labels_thresholded_rest_dom,
             pred_labels_case)
 
 
