@@ -127,7 +127,7 @@ def uproot_ntuple_to_track_prop_dict(event_set, track_type, track_properties):
         """Returns the value list corresponding to the event set, track
         type, and property name."""
 
-        return list(event_set[track_type + "_" + track_property]
+        return list(event_set["{}_{}".format(track_type, track_property)]
                     .array().flatten())
 
     return dict(map(lambda track_property:

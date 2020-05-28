@@ -22,7 +22,7 @@ def apply_threshold(pred_prob_labels, threshold):
 
 
 def pred_proportion_given_truth_case(labels, pred_labels,
-        labels_restriction, pred_labels_case, threshold=.6):
+        label_restriction, pred_label_case, threshold=.6):
     """Look at the relative proportion of a value of the predicted
     probability labels, looking only at values who match to an acutal
     label of a particular case.
@@ -30,45 +30,41 @@ def pred_proportion_given_truth_case(labels, pred_labels,
     This is the generalization of true and false positive rates.
 
     Args:
-        labels: a list of true binary classifer labels
+        labels: a list or tensor of binary classifer labels.
         pred_labels: a list of predicted binary classifier labels,
             OR a list of probablistic predictions to be converted to
-            exact predictions using the threshold
-        labels_restriction: a function returning true for values of the
-            label case to which the domain should be restricted
-        pred_labels_case: a function returning true for values to count
+            exact predictions using the threshold.
+        label_restriction: a function returning true for values of the
+            label case to which the domain should be restricted.
+        pred_label_case: a function returning true for values to count
             part of the proportion in the prediction with restricted
-            domain
+            domain.
         threshold: a threshold to apply to the probablistic data
-            before computing the agreement. Assumes binary classifier
+            before computing the agreement. Assumes binary classifier.
 
     Returns:
         The proportion of predicted values meeting a certain case given
         a restriction of true values meeting a certain case.
 
     Raises:
-        ValueError if the true and predicted labels differ in size
+        ValueError if the true and predicted labels differ in size.
     """
 
     check_pred_labels_size(labels, pred_labels)
 
-    labels_and_preds = list(map(lambda label, pred_label:
-        {"label": label, "pred": pred_label},
-        labels, pred_labels))
+    labels_meet_restriction = list(map(lambda label:
+        bool(label_restriction(label)),
+        labels if isinstance(labels, list) else labels.numpy()))
+    pred_labels_meet_case = list(map(pred_label_case,
+        apply_threshold(pred_labels, threshold)))
 
-    labels_and_preds_restricted_domain = list(filter(lambda label_and_pred:
-        labels_restriction(label_and_pred["label"]),
-        labels_and_preds))
+    domain_size = sum(labels_meet_restriction)
+    num_pred_labels_meet_case_in_domain = sum(map(
+        lambda label_meets_restriction, pred_label_meets_case:
+        label_meets_restriction and pred_label_meets_case,
+        labels_meet_restriction, pred_labels_meet_case))
 
-    pred_labels_restricted_domain = list(map(lambda label_and_pred:
-        label_and_pred["pred"],
-        labels_and_preds_restricted_domain))
-
-    pred_labels_thresholded_rest_dom =\
-        apply_threshold(pred_labels_restricted_domain, threshold)
-
-    return ndanl.get_proportion_selected(pred_labels_thresholded_rest_dom,
-            pred_labels_case)
+    return num_pred_labels_meet_case_in_domain / domain_size
 
 
 def true_positive_rate(labels, pred_labels, threshold=.6):
@@ -77,11 +73,11 @@ def true_positive_rate(labels, pred_labels, threshold=.6):
     lists are of different sizes.
 
     Args:
-        labels: a list of binary classifier labels
+        labels: a list of binary classifier labels.
         pred_labels: a list of predicted binary classifier labels,
             OR a list of probablistic predictions to be converted to
-            exact predictions using the threshold
-        threshold: a threshold to apply to the probablistic data
+            exact predictions using the threshold.
+        threshold: a threshold to apply to the probablistic data.
 
     Returns:
         The proportion of "true" cases that a model predicted correctly
@@ -100,17 +96,17 @@ def false_positive_rate(labels, pred_labels, threshold=.6):
     lists are of different sizes.
 
     Args:
-        labels: a list of binary classifier labels
+        labels: a list of binary classifier labels.
         pred_labels: a list of predicted binary classifier labels,
             OR a list of probablistic predictions to be converted to
-            exact predictions using the threshold
-        threshold: a threshold to apply to the probablistic data
+            exact predictions using the threshold.
+        threshold: a threshold to apply to the probablistic data.
 
     Returns:
-        The proportion of "false" cases that a model predicted "true"
+        The proportion of "false" cases that a model predicted "true".
 
     Raises:
-        ValueError if the true and predicted labels differ in size
+        ValueError if the true and predicted labels differ in size.
     """
 
     return pred_proportion_given_truth_case(labels, pred_labels,
@@ -123,12 +119,12 @@ def predict_labels(model, data):
     classifier. Does not apply a threshold.
 
     Args:
-        model: a tensorflow or sklearn model capable of prediction
+        model: a tensorflow or sklearn model capable of prediction.
         data: an array of elements that the model can use to make
-            predictions
+            predictions.
 
     Returns:
-        A Python list of probabilistic predictions
+        A Python list of probabilistic predictions.
     """
 
     # Different models predict in different ways
@@ -146,8 +142,8 @@ def predict_labels_cuts(tpd_selector, dataset):
     package as predicting some binary track property based on cuts.
 
     Args:
-        tpd_selector: a selector for a track properties dict
-        dataset: a TrackPropertiesDataset
+        tpd_selector: a selector for a track properties dict.
+        dataset: a TrackPropertiesDataset.
 
     Returns:
         A Python list of labels corresponding to which tracks were
@@ -160,3 +156,4 @@ def predict_labels_cuts(tpd_selector, dataset):
 
     return list(map(lambda index: 0 if index in cut_indices else 1,
        range(ndops.track_prop_dict_length(track_prop_dict))))
+

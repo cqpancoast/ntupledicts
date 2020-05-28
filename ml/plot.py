@@ -80,9 +80,10 @@ def plot_pred_comparison_by_threshold(dataset, pred_name,
     if not isinstance(thresholds, list):
         thresholds = linspace(0, 1, thresholds)
 
+    labels = dataset.get_labels()
+    predictions = dataset.get_prediction(pred_name)
     ax.scatter(thresholds, list(map(lambda threshold:
-        pred_comparison(dataset.get_labels(),
-            dataset.get_prediction(pred_name), threshold),
+        pred_comparison(labels, predictions, threshold),
         thresholds)), label=legend_id)
     ax.set_xlabel("Decision threshold")
 
@@ -110,19 +111,19 @@ def plot_rocs(dataset, prob_pred_names=[], def_pred_names=[],
     ax = plt.figure().add_subplot(111)
 
     # Plot ROC curve for models
+    labels = dataset.get_labels()
     for prob_pred_name in prob_pred_names:
         pred_prob_labels = dataset.get_prediction(prob_pred_name)
-        fpr, tpr, _ = roc_curve(dataset.get_labels(), pred_prob_labels)
-        auc = roc_auc_score(dataset.get_labels(), pred_prob_labels)
-        auc_string = " ({})".format(str(round(auc, 3)))
-        ax.plot(fpr, tpr, label=prob_pred_name+auc_string,
-                linewidth=2)
+        fpr, tpr, _ = roc_curve(labels, pred_prob_labels)
+        auc = roc_auc_score(labels, pred_prob_labels)
+        label = "{} ({})".format(prob_pred_name, str(round(auc, 3)))
+        ax.plot(fpr, tpr, label=label, linewidth=2)
 
     # Plot cuts, if any are given
     for def_pred_name in def_pred_names:
         pred_labels = dataset.get_prediction(def_pred_name)
-        fpr_cut = mlpred.false_positive_rate(dataset.get_labels(), pred_labels)
-        tpr_cut = mlpred.true_positive_rate(dataset.get_labels(), pred_labels)
+        fpr_cut = mlpred.false_positive_rate(labels, pred_labels)
+        tpr_cut = mlpred.true_positive_rate(labels, pred_labels)
         ax.scatter(fpr_cut, tpr_cut,
                    s=80, marker="*", label="cuts", color="red")
 
