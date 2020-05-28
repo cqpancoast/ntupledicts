@@ -557,3 +557,55 @@ def cut_track_prop_dict_by_indices(track_prop_dict, indices_to_cut):
 
     return cut_track_prop_dict
 
+
+def normalize_ntuple_dict(ntuple_dict, normalize_dict=None):
+    """Normalizes each value list in an ntuple dict. Does not attempt
+    to normalize values of the same property but different track types
+    in the same way.
+
+    Args:
+        ntuple_dict: an ntuple dict.
+        normalize_dict: a dictionary from track types to lists of
+            properties to normalize of that track type. If None,
+            normalizes all value lists.
+
+    Returns:
+        An ntuple dict with the appropriate value lists normalized.
+    """
+
+    base_normalize_dict = dict(map(lambda track_type: (track_type, None),
+        ntuple_dict.keys()))
+    base_normalize_dict.update(normalize_dict)
+
+    return dict(map(lambda track_type:
+        (track_type, normalize_track_prop_dict(ntuple_dict[track_type],
+            base_normalize_dict[track_type])),
+        base_normalize_dict.keys()))
+
+
+def normalize_track_prop_dict(track_prop_dict, props_to_normalize=None):
+    """Returns a track prop dict of the same form as the original, but
+    each value list has been divided by its highest value. All values
+    are normalized by default, but only some will be normalized if a
+    list is given."""
+
+    if props_to_normalize is None:
+        props_to_normalize = list(track_prop_dict.keys())
+    else:
+        for track_property in props_to_normalize:
+            if track_property not in list(track_prop_dict.keys()):
+                warn("{} not in tracks properties; will not normalize"
+                        .format(track_property), UserWarning)
+
+    return dict(map(lambda track_property:
+        (track_property, normalize_val_list(track_prop_dict[track_property])),
+        props_to_normalize))
+
+
+def normalize_val_list(val_list):
+    """Returns a list of numeric values by the size of their maximum
+    value."""
+
+    max_val = max(val_list)
+    return [ val / max_val for val in val_list ]
+

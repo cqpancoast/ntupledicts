@@ -1,5 +1,7 @@
 from tensorflow import constant as tfconst
 from tensorflow import transpose as tftrans
+from tensorflow.keras.utils import normalize as tfnorm
+from tensorflow import float64
 from .. import operations as ndops
 from copy import deepcopy
 
@@ -24,6 +26,10 @@ class TrackPropertiesDataset:
         tpds.get_active_data_properties()  # ["pt"]
         tpds.set_active_data_properties(["chi2", "matchtp_pdgid"])
             # ValueError: matchtp_pdgid not an available data property
+
+    By default, self.get_data() returns data normalized for each track
+    property for maximum model compatibility, though this can be
+    disabled with the kwarg normalize=False.
 
     This dataset can also store predictions, accept selector dicts to
     preform cuts, and be split into multiple datasets of the same form
@@ -126,18 +132,21 @@ class TrackPropertiesDataset:
 
     # DATA
 
-    def get_data(self, track_properties=None):
+    def get_data(self, track_properties=None, normalize=False):
         """Returns data corresponding to the given data properties as
-        a tensorflow array. By default, returns the active data.
+        a tensorflow array. By default, returns non-normalized active
+        data.
 
         Args:
             track_properties: a list of track properties. If None,
                 returns the active data.
+            normalize: normalize the data within each track property.
+                False by default.
 
         Returns:
             A tensor array of this dataset's data. It is indexed on the
             first axis by track number, and on the second by track
-            property,
+            property.
 
         Raises:
             ValueError: if one of the given track properties is not in
@@ -148,15 +157,15 @@ class TrackPropertiesDataset:
             track_properties = self.get_active_data_properties()
         else:
             for track_property in track_properties:
-                if track_property not in \
-                        self.get_available_data_properties():
+                if track_property not in self.get_available_data_properties():
                     raise ValueError("Provided track property {} not available"
                                      "in this dataset.".format(track_property))
 
         return tftrans(tfconst(list(map(lambda track_property:
-                                                 self._track_prop_dict[
-                                                     track_property],
-                                                 track_properties))))
+                    ndops.normalize_val_list(
+                        self._track_prop_dict[track_property]) if normalize\
+                                else self._track_prop_dict[track_property],
+                    track_properties)), dtype=float64))
 
     def get_active_data_properties(self):
         """Returns a list of the current active data properties in this
