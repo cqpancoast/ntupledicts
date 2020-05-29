@@ -7,6 +7,8 @@ lists that wouldn't be found in the original ntuple.
 """
 
 from . import operations as ndops
+from .operations import select as sel
+from numpy import linspace
 
 
 def get_proportion_selected(val_list, selector, norm=True):
@@ -109,8 +111,9 @@ def take_measure_by_bin(track_prop_dict, bin_property, measure, bins=30):
         measure(ndops.cut_track_prop_dict(track_prop_dict,
             # Select values in range lower_bin to upper_bin,
             # but exclude values equal to upper_bin
-            {bin_property: lambda val: select(lower_bin, upper_bin)(val) and
-                select([select(upper_bin)], invert=True)})),
+            {bin_property: lambda val:
+                sel(lower_bin, upper_bin)(val) and\
+                        sel([sel(upper_bin)], invert=True)})),
         bins[:-1], bins[1:]))
 
     return bins, bin_heights
@@ -151,10 +154,10 @@ def eff_from_track_prop_dict(track_prop_dict_tp, selector_dict={}):
         properties dict
     """
 
-    return get_proportion_selected(
+    return ndops.get_proportion_selected(
             ndops.cut_track_prop_dict(
                 track_prop_dict_tp, selector_dict)["nmatch"],
-            select(1, inf))
+            sel(1, float("inf")))
 
 
 class StubInfo(object):

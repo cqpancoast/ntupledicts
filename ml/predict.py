@@ -59,6 +59,9 @@ def pred_proportion_given_truth_case(labels, pred_labels,
         apply_threshold(pred_labels, threshold)))
 
     domain_size = sum(labels_meet_restriction)
+    if domain_size == 0:
+        return 0
+
     num_pred_labels_meet_case_in_domain = sum(map(
         lambda label_meets_restriction, pred_label_meets_case:
         label_meets_restriction and pred_label_meets_case,

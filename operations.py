@@ -6,29 +6,33 @@ from random import seed as set_seed
 from copy import deepcopy
 from functools import reduce
 from math import inf
-from numpy import linspace
 from numpy import cumsum
 from warnings import warn
 
 
-def uproot_ntuples_to_ntuple_dict(event_sets, properties_by_track_type):
+def uproot_ntuples_to_ntuple_dict(event_sets, properties_by_track_type,
+        keep_invalid_vals=False):
     """Takes in a collection of uproot ntuples and a dictionary from
     track types to desired properties to be included, returns an ntuple
     dictionary formed by selecting properties from the ntuples and then
-    concatenating them all together.
+    concatenating them all together. Cuts any invalid values, like inf
+    or nan, by default.
 
     Args:
         event_sets: a collection of uproot ntuples.
         properties_by_track_type: a dictionary from track types (trk,
             matchtrk, etc.) to properties to be selected
             (eta, pt, chi2).
+        keep_invalid_vals: if True, don't cut tracks with inf or nan as
+            one of their values.
 
     Returns:
         An ntuple dict.
     """
 
     return add_ntuple_dicts(list(map(lambda event_set:
-        uproot_ntuple_to_ntuple_dict(event_set, properties_by_track_type),
+        uproot_ntuple_to_ntuple_dict(event_set,
+            properties_by_track_type, keep_invalid_vals),
         event_sets)))
 
 
@@ -88,7 +92,8 @@ def add_track_prop_dicts(track_prop_dicts):
     return reduce(add_two_track_prop_dicts, track_prop_dicts)
 
 
-def uproot_ntuple_to_ntuple_dict(event_set, properties_by_track_type):
+def uproot_ntuple_to_ntuple_dict(event_set, properties_by_track_type,
+        keep_invalid_vals=False):
     """Turns an uproot ntuple into an ntuple dictionary.
 
     Args:
@@ -96,15 +101,38 @@ def uproot_ntuple_to_ntuple_dict(event_set, properties_by_track_type):
         properties_by_track_type: a dictionary from track types (trk,
              matchtrk, etc.) to properties to be selected
              (eta, pt, chi2).
+        keep_invalid_vals: if True, don't cut tracks with inf or nan as
+            one of their values.
 
     Returns:
         An ntuple dict.
     """
 
-    return dict(map(lambda track_type, track_properties:
+    ntuple_dict = dict(map(lambda track_type, track_properties:
         (track_type, uproot_ntuple_to_track_prop_dict(
             event_set, track_type, track_properties)),
         properties_by_track_type.keys(), properties_by_track_type.values()))
+
+    if keep_invalid_vals:
+        return ntuple_dict
+    else:
+        invalid_vals = [float("nan"), float("inf")]
+        invalid_track_sel = select(
+                [select(invalid_val) for invalid_val in invalid_vals],
+                invert=True)
+
+        # Select for the above selector in every field of an ntuple dict,
+        # but only if the list contains those values in the first place
+        invalid_sel_dict = dict(map(lambda track_type:
+            (track_type, dict(map(lambda track_property:
+                (track_property, invalid_track_sel),
+                list(filter(lambda track_property:
+                    any(invalid_val in ntuple_dict[track_type][track_property]\
+                        for invalid_val in invalid_vals),
+                    ntuple_dict[track_type].keys()))))),
+            ntuple_dict.keys()))
+
+        return cut_ntuple_dict(ntuple_dict, invalid_sel_dict)
 
 
 def uproot_ntuple_to_track_prop_dict(event_set, track_type, track_properties):
@@ -199,8 +227,8 @@ def shuffle_ntuple_dict(ntuple_dict, seed=None):
     way.
 
     Args:
-        ntuple_dict: an ntuple dictionary
-        seed: a seed for the random shuffling for reproducability
+        ntuple_dict: an ntuple dictionary.
+        seed: a seed for the random shuffling for reproducability.
 
     Returns:
         An ntuple dict with its value lists shuffled, preserving the
@@ -247,18 +275,18 @@ def shuffle_track_prop_dict(track_prop_dict, shuffled_indices=None, seed=None):
     shuffled.
 
     Args:
-        track_prop_dict: a track properties dictionary
+        track_prop_dict: a track properties dictionary.
         shuffled_indices: a complete list of indices in the range of
             the number of tracks in this track properties dict. Used
-            to completely determine a shuffling
-        seed: a seed for the random shuffling for reproducability
+            to completely determine a shuffling.
+        seed: a seed for the random shuffling for reproducability.
 
     Returns:
         A track properties dict whose value lists have been shuffled.
 
     Raises:
         ValueError: if shuffled_indices is different length than
-        track_prop_dict
+        track_prop_dict.
     """
 
     def generate_shuffled_indices(tpd_length):
@@ -481,15 +509,15 @@ def cut_track_prop_dict(track_prop_dict, tpd_selector):
     according to a cut dictionary.
 
     Args:
-        track_prop_dict: a tracks properties dictionary
-        tpd_selector: a selector for a tracks properties dictionary
+        track_prop_dict: a tracks properties dictionary.
+        tpd_selector: a selector for a tracks properties dictionary.
 
     Returns:
-        A cut tracks properties dictionary
+        A cut tracks properties dictionary.
     """
 
     return cut_track_prop_dict_by_indices(track_prop_dict,
-            select_indices(track_prop_dict, tpd_selector))
+                select_indices(track_prop_dict, tpd_selector))
 
 
 def select_indices(track_prop_dict, tpd_selector, invert=True):
@@ -499,15 +527,15 @@ def select_indices(track_prop_dict, tpd_selector, invert=True):
     won't raise an exception, but will print a message.
 
     Args:
-        track_prop_dict: a tracks properties dictionary
+        track_prop_dict: a tracks properties dictionary.
         tpd_selector: a dictionary from track property names to
-            selectors
-        invert: return all indices NOT selected. Default is True as
-            this jibes with how this function is mainly used: track cuts
+            selectors.
+        invert: return all indices NOT selected. Default is True. This
+            jibes with how this function is mainly used: track cuts.
 
     Returns:
         Indices from the track properties dict selected by the selector
-        dict
+        dict.
     """
 
     # Determine which selection conditions will be applied
@@ -539,7 +567,7 @@ def cut_track_prop_dict_by_indices(track_prop_dict, indices_to_cut):
     have to be sorted by size.
 
     Args:
-        track_prop_dict: a tracks properties dictionary
+        track_prop_dict: a tracks properties dictionary.
         indices_to_cut: a collection of indices to cut. Repeats are
             tolerated, but out-of-range indices will result in an
             exception.
@@ -606,6 +634,7 @@ def normalize_val_list(val_list):
     """Returns a list of numeric values by the size of their maximum
     value."""
 
-    max_val = max(val_list)
-    return [ val / max_val for val in val_list ]
+    max_val = float(max(val_list))
+
+    return [ val/max_val if max_val != 0 else 0 for val in val_list ]
 

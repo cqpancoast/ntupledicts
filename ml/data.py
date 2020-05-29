@@ -132,7 +132,7 @@ class TrackPropertiesDataset:
 
     # DATA
 
-    def get_data(self, track_properties=None, normalize=False):
+    def get_data(self, track_properties=None, normalize=True):
         """Returns data corresponding to the given data properties as
         a tensorflow array. By default, returns non-normalized active
         data.
