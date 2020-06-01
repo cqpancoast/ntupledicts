@@ -72,22 +72,30 @@ def add_track_prop_dicts(track_prop_dicts):
         track properties dict in the input list concatenated.
 
     Raises:
-        ValueError: any track properties dicts don't share a property.
+        ValueError: if there is no property shared by all of the track
+            property dicts.
     """
 
     def add_two_track_prop_dicts(tp_so_far, tp_to_add):
         """Adds two track properties dicts together as per rules in
         parent function. Returns the sum."""
 
-        if set(tp_so_far.keys()) != set(tp_to_add.keys()):
-            raise ValueError("Track property dictionaries with differing "
-                    "properties cannot be added.")
+        props_in_common = set(tp_so_far.keys()).intersection(
+                set(tp_to_add.keys()))
 
-        return dict(map(lambda track_property, vals_so_far, vals_to_add:
-            (track_property, vals_so_far + vals_to_add),
-            tp_so_far.keys(),
-            list(tp_so_far.values()),
-            list(tp_to_add.values())))
+        if props_in_common != set(tp_to_add.keys()):
+            warn("Track property dicts have differing value lists. "
+                    "Will add only properties in common: {}"
+                    .format(props_in_common), UserWarning)
+
+        if not len(props_in_common):
+            raise ValueError("Track property dicts to add have no properties "
+                    "in common.")
+
+        return dict(map(lambda track_property:
+            (track_property,
+                tp_so_far[track_property] + tp_to_add[track_property]),
+            props_in_common))
 
     return reduce(add_two_track_prop_dicts, track_prop_dicts)
 
@@ -182,7 +190,7 @@ def track_prop_dict_length(track_prop_dict):
     # A fancy way of checking if all value lists are the same length
     val_list_lengths = set(map(len, track_prop_dict.values()))
     if len(val_list_lengths) > 1:
-        raise ValueError("Invalid track prop dictionary:"
+        raise ValueError("Invalid track prop dictionary: "
                 "value lists are of different sizes")
     if len(val_list_lengths) == 0:
         return 0
