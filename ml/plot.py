@@ -2,7 +2,8 @@ from numpy import linspace
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, roc_auc_score
 from .. import plot as ndplot
-from . import predict as mlpred
+from . import predict as ndmlpred
+from scipy.stats import binom
 
 
 def plot_pred_comparison_by_track_property(dataset, pred_name,
@@ -39,12 +40,16 @@ def plot_pred_comparison_by_track_property(dataset, pred_name,
     track_prop_dict = dataset.to_track_prop_dict(include_preds=True)
 
     def measure_pred_comparison(track_prop_dict):
-        """Measures the prediction comparison of true labels and
-        predicted labels that are within a track propeties dict."""
+        """Measures some prediction comparison of true labels and
+        predicted labels that are within a track propeties dict given
+        the input function to the parent function.
+
+        Returns:
+            A tuple containing the measured prediction comparison and
+            the binomial error."""
 
         return pred_comparison(track_prop_dict[dataset.get_label_property()],
-                track_prop_dict[pred_name],
-                threshold)
+                track_prop_dict[pred_name], threshold), 0
 
     return ndplot.plot_measure_by_bin(track_prop_dict, bin_property,
             measure_pred_comparison, bins, legend_id, ax)
@@ -82,9 +87,13 @@ def plot_pred_comparison_by_threshold(dataset, pred_name,
 
     labels = dataset.get_labels()
     predictions = dataset.get_prediction(pred_name)
-    ax.scatter(thresholds, list(map(lambda threshold:
+    ax.errorbar(thresholds, list(map(lambda threshold:
         pred_comparison(labels, predictions, threshold),
-        thresholds)), label=legend_id)
+        thresholds)),
+        yerr=list(map(lambda threshold:
+            0,
+            thresholds)),
+        label=legend_id, fmt=".")
     ax.set_xlabel("Decision threshold")
 
     return ax
@@ -122,10 +131,10 @@ def plot_rocs(dataset, prob_pred_names=[], def_pred_names=[],
     # Plot cuts, if any are given
     for def_pred_name in def_pred_names:
         pred_labels = dataset.get_prediction(def_pred_name)
-        fpr_cut = mlpred.false_positive_rate(labels, pred_labels)
-        tpr_cut = mlpred.true_positive_rate(labels, pred_labels)
-        ax.scatter(fpr_cut, tpr_cut,
-                   s=80, marker="*", label="cuts", color="red")
+        fpr_cut = ndmlpred.false_positive_rate(labels, pred_labels)
+        tpr_cut = ndmlpred.true_positive_rate(labels, pred_labels)
+        ax.scatter(fpr_cut, tpr_cut, s=80, marker="*",
+                label="cuts: {}".format(def_pred_name), color="red")
 
     ax.tick_params(labelsize=14)
     ax.set_xlabel("FPR", fontsize=20)

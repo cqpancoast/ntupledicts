@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 from . import analyze as ndanl
 from . import operations as ndops
 from .operations import select as sel
+from math import sqrt
 
 
 def plot_roc_curve_from_cut_list(ntuple_dict, cut_property, cuts,
@@ -69,7 +70,8 @@ def plot_roc_curve_from_cut_list(ntuple_dict, cut_property, cuts,
 def plot_measure_by_bin(track_prop_dict, bin_property, measure,
                         bins=30, legend_id=None, ax=None):
     """Splits a track property dict into bins by some value, then
-    compute a measure on each binned track property dict.
+    computes a measure on each binned track property dict, including
+    some error.
 
     Args:
         track_prop_dict: a track properties dict.
@@ -77,7 +79,7 @@ def plot_measure_by_bin(track_prop_dict, bin_property, measure,
             into bins. Preferably a continuous value, but no hard
             restriction is made in this code.
         measure: a function that takes in a track properties dict and
-            returns a number.
+            returns a numerical value and an error.
         bins: either an int for the number of bins, a 3-tuple of the
             form (low_bound, high_bound, num_bins), or a list of
             numbers. See ntupledict.operations.make_bins() for info.
@@ -93,12 +95,13 @@ def plot_measure_by_bin(track_prop_dict, bin_property, measure,
     if ax is None:
         ax = plt.figure().add_subplot(111)
 
-    bins, bin_heights = ndanl.take_measure_by_bin(track_prop_dict,
+    bins, bin_heights, bin_errs = ndanl.take_measure_by_bin(track_prop_dict,
                                                   bin_property, measure, bins)
     bin_middles = list(map(lambda lower, upper: (lower + upper) / 2,
                            bins[:-1], bins[1:]))
 
-    ax.scatter(bin_middles, bin_heights, label=legend_id)
+    ax.errorbar(bin_middles, bin_heights, yerr=bin_errs,
+            label=legend_id, fmt=".")
     ax.set_xlabel(bin_property)
 
     return ax
@@ -107,7 +110,8 @@ def plot_measure_by_bin(track_prop_dict, bin_property, measure,
 def plot_property_bin_hist(track_prop_dict, track_property, bins=30,
                        legend_id=None, ax=None):
     """Plot a histogram distribution of a track property in a track
-    properties dict.
+    properties dict. Error bars are simply one over the square root of
+    the number of occurrences.
 
     Args:
         track_prop_dict: a track properties dict
@@ -130,7 +134,8 @@ def plot_property_bin_hist(track_prop_dict, track_property, bins=30,
         ax = plt.figure().add_subplot(111)
 
     ax = plot_measure_by_bin(track_prop_dict, track_property,
-                             lambda tpd: len(tpd[track_property]),
+                             lambda tpd: (len(tpd[track_property]),
+                                 sqrt(len(tpd[track_property]))),
                              bins, legend_id, ax)
     ax.set_ylabel("num. tracks")
     ax.set_title("Histrogram of {}".format(track_property))
@@ -141,7 +146,8 @@ def plot_property_bin_hist(track_prop_dict, track_property, bins=30,
 def plot_property_scatter(track_prop_dict, track_property, legend_id=None,
         ax=None):
     """Plot a scatter plot of a track property in a track properties
-    dict. Intended for track properties who take discrete values.
+    dict. Intended for track properties who take discrete values. Error
+    bars are simply one over the square root of a number of occurrences.
 
     Args:
         track_prop_dict: a track properties dict
@@ -165,8 +171,11 @@ def plot_property_scatter(track_prop_dict, track_property, legend_id=None,
     hist_dict = dict(map(lambda value:
         (str(value), val_list.count(value)),
         set(val_list)))
+    hist_yerrs = list(map(lambda height: 1 / sqrt(height),
+        hist_dict.values()))
 
-    ax.scatter(hist_dict.keys(), hist_dict.values(), label=legend_id)
+    ax.errorbar(hist_dict.keys(), hist_dict.values(), yerrs=hist_yerrs,
+            label=legend_id, fmt=".")
     ax.set_yscale("log")  # we usually want log when we're counting
     ax.set_xlabel(track_property)
     ax.set_ylabel("number of tracks")

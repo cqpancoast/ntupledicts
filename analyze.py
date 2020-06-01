@@ -9,6 +9,7 @@ lists that wouldn't be found in the original ntuple.
 from . import operations as ndops
 from .operations import select as sel
 from numpy import linspace
+from statistics import stdev
 
 
 def get_proportion_selected(val_list, selector, norm=True):
@@ -77,7 +78,7 @@ def make_bins(bin_specifier, binning_values):
         return bin_specifier
 
     raise ValueError("Expected int, tuple, or list as arg 'bin_specifier', "
-            "but received {}.".format(str(type(bin_specifier))))
+            "but received {}.".format(str(bin_specifier)))
 
 
 def take_measure_by_bin(track_prop_dict, bin_property, measure, bins=30):
@@ -93,21 +94,21 @@ def take_measure_by_bin(track_prop_dict, bin_property, measure, bins=30):
             into bins. Preferably a continuous value, but no hard
             restriction is made in this code.
         measure: a function that takes in a track properties dict and
-            returns a number.
+            returns a number and a standard deviation.
         bins: either an int for the number of bins, a 3-tuple of the
             form (low_bound, high_bound, num_bins), or a list of
             numbers. See ntupledict.operations.make_bins() for info.
 
     Returns:
-        The bins and the bin heights computed from the binned value
-        lists.
+        The bins, bin heights, and standard deviations computed from
+        the binned value lists.
     """
 
     binning_val_list = track_prop_dict[bin_property]
     bins = make_bins(bins, binning_val_list)
 
     # Sort values into bins with respect to binning value
-    bin_heights = list(map(lambda lower_bin, upper_bin:
+    bin_heights_and_stdevs = list(map(lambda lower_bin, upper_bin:
         measure(ndops.cut_track_prop_dict(track_prop_dict,
             # Select values in range lower_bin to upper_bin,
             # but exclude values equal to upper_bin
@@ -116,13 +117,16 @@ def take_measure_by_bin(track_prop_dict, bin_property, measure, bins=30):
                         sel([sel(upper_bin)], invert=True)})),
         bins[:-1], bins[1:]))
 
-    return bins, bin_heights
+    bin_heights = list(map(lambda l: l[0], bin_heights_and_stdevs))
+    bin_stdevs = list(map(lambda l: l[1], bin_heights_and_stdevs))
+
+    return bins, bin_heights, bin_stdevs
 
 
 def eff_from_ntuple_dict(ntuple_dict, tp_selector_dict={}):
-    """Finds the efficieny of an ntuple dict. Restrictions can be made
-    on the tracking particles by performing a cut on the ntuple. Note
-    that the ntuple must contain pt.
+    """Finds the efficieny of an ntuple dict and its standard deviation.
+    Restrictions can be made on the tracking particles by performing a
+    cut on the ntuple. Note that the ntuple must contain pt.
 
     Args:
         ntuple_dict: an ntuple dictionary containing a tracking
@@ -131,17 +135,18 @@ def eff_from_ntuple_dict(ntuple_dict, tp_selector_dict={}):
             ("pt", "eta", etc.) to conditions (lambda pt: pt < 2, etc.).
 
     Returns:
-        The efficiency of the tracking algorithm for the tracks in the
-        given ntuple dict.
+        A tuple containing the efficiency of the tracking algorithm for
+        the tracks in the given ntuple dict and the standard deviation.
     """
 
     return eff_from_track_prop_dict(ntuple_dict["tp"], tp_selector_dict)
 
 
 def eff_from_track_prop_dict(track_prop_dict_tp, selector_dict={}):
-    """Finds the efficieny of an track properties dict. Restrictions
-    can be made on the tracking particles by performing a cut. Note
-    that the track properties dictionary must be of tracking particles.
+    """Finds the efficieny with stdev of an track properties dict.
+    Restrictions can be made on the tracking particles by performing a
+    cut. Note that the track properties dictionary must be of tracking
+    particles.
 
     Args:
         track_prop_dict_tp: a tracks properties dict carrying value
@@ -150,14 +155,14 @@ def eff_from_track_prop_dict(track_prop_dict_tp, selector_dict={}):
             ("pt", "eta", etc.) to conditions (lambda pt: pt < 2, etc.).
 
     Returns:
-        The efficiency of the tracking algorithm run on the given track
-        properties dict
+        A tuple containing the efficiency of the tracking algorithm for
+        the tracks in the given ntuple dict and the standard deviation.
     """
 
     return ndops.get_proportion_selected(
             ndops.cut_track_prop_dict(
                 track_prop_dict_tp, selector_dict)["nmatch"],
-            sel(1, float("inf")))
+            sel(1, float("inf"))), stdev(track_prop_dict_tp["nmatch"])
 
 
 class StubInfo(object):
