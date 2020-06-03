@@ -44,10 +44,11 @@ def pred_proportion_given_truth_case(labels, pred_labels,
 
     Returns:
         The proportion of predicted values meeting a certain case given
-        a restriction of true values meeting a certain case.
+        a restriction of true values meeting a certain case, and the
+        error in prediction.
 
     Raises:
-        ValueError if the true and predicted labels differ in size.
+        ValueError: if the true and predicted labels differ in size.
     """
 
     check_pred_labels_size(labels, pred_labels)
@@ -60,14 +61,15 @@ def pred_proportion_given_truth_case(labels, pred_labels,
 
     domain_size = sum(labels_meet_restriction)
     if domain_size == 0:
-        return 0
+        return 0, 0
 
     num_pred_labels_meet_case_in_domain = sum(map(
         lambda label_meets_restriction, pred_label_meets_case:
         label_meets_restriction and pred_label_meets_case,
         labels_meet_restriction, pred_labels_meet_case))
 
-    return num_pred_labels_meet_case_in_domain / domain_size
+    return num_pred_labels_meet_case_in_domain / domain_size, ndanl.pred_error(
+            domain_size, num_pred_labels_meet_case_in_domain)
 
 
 def true_positive_rate(labels, pred_labels, threshold=.6):
@@ -84,9 +86,10 @@ def true_positive_rate(labels, pred_labels, threshold=.6):
 
     Returns:
         The proportion of "true" cases that a model predicted correctly
+        and the prediction error.
 
     Raises:
-        ValueError if the true and predicted labels differ in size
+        ValueError: if the true and predicted labels differ in size.
     """
 
     return pred_proportion_given_truth_case(labels, pred_labels,
@@ -106,10 +109,11 @@ def false_positive_rate(labels, pred_labels, threshold=.6):
         threshold: a threshold to apply to the probablistic data.
 
     Returns:
-        The proportion of "false" cases that a model predicted "true".
+        The proportion of "false" cases that a model predicted "true"
+        and the error in prediction.
 
     Raises:
-        ValueError if the true and predicted labels differ in size.
+        ValueError: if the true and predicted labels differ in size.
     """
 
     return pred_proportion_given_truth_case(labels, pred_labels,

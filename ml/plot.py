@@ -46,10 +46,10 @@ def plot_pred_comparison_by_track_property(dataset, pred_name,
 
         Returns:
             A tuple containing the measured prediction comparison and
-            the binomial error."""
+            the error."""
 
         return pred_comparison(track_prop_dict[dataset.get_label_property()],
-                track_prop_dict[pred_name], threshold), 0
+                track_prop_dict[pred_name], threshold)
 
     return ndplot.plot_measure_by_bin(track_prop_dict, bin_property,
             measure_pred_comparison, bins, legend_id, ax)
@@ -87,12 +87,15 @@ def plot_pred_comparison_by_threshold(dataset, pred_name,
 
     labels = dataset.get_labels()
     predictions = dataset.get_prediction(pred_name)
-    ax.errorbar(thresholds, list(map(lambda threshold:
+
+    pred_comps_with_errors = list(map(lambda threshold:
         pred_comparison(labels, predictions, threshold),
-        thresholds)),
-        yerr=list(map(lambda threshold:
-            0,
-            thresholds)),
+        thresholds))
+
+    pred_comps = list(map(lambda l: l[0], pred_comps_with_errors))
+    pred_errs = list(map(lambda l: l[1], pred_comps_with_errors))
+
+    ax.errorbar(thresholds, pred_comps, pred_errs,
         label=legend_id, fmt=".")
     ax.set_xlabel("Decision threshold")
 

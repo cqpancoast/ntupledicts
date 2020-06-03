@@ -171,10 +171,10 @@ def plot_property_scatter(track_prop_dict, track_property, legend_id=None,
     hist_dict = dict(map(lambda value:
         (str(value), val_list.count(value)),
         set(val_list)))
-    hist_yerrs = list(map(lambda height: 1 / sqrt(height),
+    hist_yerr = list(map(lambda height: 1 / sqrt(height),
         hist_dict.values()))
 
-    ax.errorbar(hist_dict.keys(), hist_dict.values(), yerrs=hist_yerrs,
+    ax.errorbar(hist_dict.keys(), hist_dict.values(), yerr=hist_yerr,
             label=legend_id, fmt=".")
     ax.set_yscale("log")  # we usually want log when we're counting
     ax.set_xlabel(track_property)
