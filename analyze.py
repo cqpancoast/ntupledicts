@@ -226,9 +226,13 @@ class StubInfo(object):
     def _gen_expected(self, abseta):
         """Sets a tuple of boolean values indicating whether the
         Kalman filter expects a hit on a layer/disk for some absolute
-        eta. If eta is greater than 2.4, the list will be all False."""
+        eta. If eta is greater than 2.4, the list will be all False.
 
-        # eta regions and the indices of expected layers/disks
+        Args:
+            abseta: the absolute value of a pseudorapitiy measurement
+        """
+
+        # eta regions for and indices of expected layers/disks
         eta_regions = [0., 0.2, 0.41, 0.62, 0.9, 1.26, 1.68, 2.08, 2.4]
         num_layers_disks = 11
         layer_maps = [[1,  2,  3,  4,  5,  6],
@@ -256,7 +260,13 @@ class StubInfo(object):
         """Generates a tuple of the same form as the expected hits tuple
         using the hitpattern variable and the expected hits list. Each
         True value in this list represents a hit. The _gen_expected()
-        method must be run first."""
+        method must be run first.
+
+        Args:
+            hitpattern: a number that, when in base two, corresponds to
+                a list of zeroes or ones that indicate whether each
+                layer in a set of six or seven expected layers were hit.
+        """
 
         def gen_hits_iter(hitpattern, num_expected):
             """Return an iterator through hitpattern by converting it
@@ -277,7 +287,11 @@ class StubInfo(object):
         """Generates a tuple indexed by layer for which each boolean
         value represents whether a layer or disk is PS (True) or 2S
         (False). This is necessary because a given disk has PS and 2S
-        modules, separated by eta."""
+        modules, separated by eta.
+
+        Args:
+            abseta: the absolute value of a pseudorapitiy measurement
+        """
 
         layer_ps_2s = 3 * (True,) + 3 * (False,)
 

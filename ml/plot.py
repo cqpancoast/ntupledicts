@@ -118,6 +118,9 @@ def plot_rocs(dataset, prob_pred_names=[], def_pred_names=[],
         def_pred_names: names of pre-thresholded predictions
             accessible from the dataset. This is what is used for cut-
             generated predictions. Plotted as a point.
+
+    Returns:
+        The axes object to used to plot in this function.
     """
 
     ax = plt.figure().add_subplot(111)

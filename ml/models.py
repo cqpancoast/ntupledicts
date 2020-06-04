@@ -11,18 +11,18 @@ def make_neuralnet(train_dataset, eval_dataset=None,
 
     Args:
         train_dataset: a TrackPropertiesDataset that the model will
-            train on
+            train on.
         eval_dataset: a TrackPropertiesDataset that the model will
-            use to evalutate performance at the end of each epoch
+            use to evalutate performance at the end of each epoch.
         hidden_layers: a list of hidden layer sizes. By default, there
             are no hidden layers, just the input and the output, which
-            are predetermined by data dimension
-        epochs: how many time the neural net is trained on data
+            are predetermined by data dimension.
+        epochs: how many time the neural net is trained on data.
         classifier_order: order of categorization. This is set to 1 at
-            default, assuming a binary classifier
+            default, assuming a binary classifier.
 
     Returns:
-        A trained tensorflow neural net
+        A trained tensorflow neural net.
     """
 
     # Build the scaffolding
@@ -58,11 +58,12 @@ def make_gbdt(train_dataset, n_estimators=100, max_depth=3, random_state=23):
 
     Args:
         train_dataset: a TrackPropertiesDataset that the model will
-            train on
-        TODO: I don't understand what any of these other ones do
+            train on.
+        n_estimators, max_depth, random_state: check out the sklearn
+            documentation for a GradientBoostingClassifier.
 
     Returns:
-        A trained sklearn gradient boosted decision tree
+        A trained sklearn gradient boosted decision tree.
     """
 
     gbdt = GradientBoostingClassifier(

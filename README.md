@@ -9,8 +9,7 @@ Designed with machine learning studies in mind.**
 Info on the CMS TrackTrigger can be found [here](https://arxiv.org/abs/1705.04321).
 Info on CMS as a whole can be found [here](https://home.cern/science/experiments/cms).
 
-I'd like to thank [Claire Savard](https://github.com/cgsavard) for her previous
-work in machine learning for the track trigger.
+I'd like to thank [Claire Savard](https://github.com/cgsavard) for her previous work in machine learning for the track trigger.
 All plots in the `ntupledicts.ml.plot` module are based off of ones that she developed.
 
 
@@ -62,6 +61,8 @@ property dict in the first place*.
 Here's a sample of code where I make an **ntuple dict** from root ntuples:
 
 ```python
+input_files = ["TTbar_PU200_D49.root", "QCD_PU200_D49.root"]
+
 # Open ntuples
 event_sets = []
 for input_file in input_files:
@@ -75,6 +76,12 @@ properties_by_track_type = {"trk": ["pt", "eta", "genuine"],
 # Create ntuple properties dict from event set
 ntuple_dict = ndops.ntuples_to_ntuple_dict(event_sets, properties_by_track_type)
 ```
+
+It really is as easy as this: choose whichever samples you wish, choose the properties you want from them, and shove this into a function.
+
+Note that this function, `ntuples_to_ntuple_dict`, automatically cuts tracks with invalid values like `inf` or `nan` upon creation.
+As this takes time, this can be disabled with a keyword argument, as those values are unusual.
+However, it is the default, as even one `inf` or `nan` can ruin a machine learning train session.
 
 ### Applying cuts to an ntuple dictionary
 
@@ -122,9 +129,11 @@ This will select zero and any value between one and four, inclusive.
 To "reverse" any **selector**, simply add the keyword arg `invert=True` into a composed **selector**.
 For example, `sel([sel(1, 3)], invert=True)` will select all values outside of the inclusive range one through three.
 
-### Other functions of note in ntupledicts.operations
+#### Other functions of note in ntupledicts.operations
 
-(`import * from ntupledicts.operations`)
+```python
+import * from ntupledicts.operations
+```
 
 - **Ntuple dicts** with the same track types and properties can be added together with `add_ntuple_dicts`.
 - `select_indices` returns the indices in a **track properties dict** selected by a **selector** of the same form.
@@ -134,6 +143,35 @@ For example, `sel([sel(1, 3)], invert=True)` will select all values outside of t
 
 Also, note that most functions that do something to **ntuple dict**s have
 corresponding functions that do that thing to **track property dict**s.
+
+### Analyzing the contents of an ntuple dict
+
+```python
+import * from ntupledicts.analyze
+```
+
+The analyze module includes functions for getting the efficiency of a sample from a track properties dict, getting the proportion of a dict selected by some selector, and binning a dict by some track property or another.
+The most interesting part of the module is the `StubInfo` class, which allows you to make custom track properties based on stub information associated with the stub.
+
+You would find the number of missing 2S or PS stubs associated with a track and create a new track property for it like this:
+
+```python
+missing_2S_layer = lambda expected, hit, ps: not ps and expected and not hit
+missing_PS_layer = lambda expected, hit, ps: ps and expected and not hit
+
+track_prop_dict["missing2S"] = create_stub_info_list(track_prop_dict,
+        ndanl.basic_process_stub_info(missing_2S_layer))
+track_prop_dict["missingPS"] = create_stub_info_list(track_prop_dict,
+        ndanl.basic_process_stub_info(missing_PS_layer))
+```
+
+`create_stub_info_list()` is a function that uses the eta and hitpattern associated with each track in a track properties dict (assuming those track properties have been included) to generate stub information.
+The eta is used to find which layers are expected to be hit and whether each is a PS or 2S module.
+The hitpattern is then used to find which of those expected layers were actually hit.
+
+Using both of these, `basic_process_stub_info()` is able to take in the lambda expressions `missing_2S_layer` and `missing_PS_layer` (as well as any that can be defined using that form) to find that information for each track, creating a list that can simply be added to the `track_prop_dict`.
+
+For more information about the internals of this process, see the `StubInfo` class in `ntupledicts.analyze`.
 
 ### Plotting
 
@@ -241,10 +279,13 @@ All of the plotting functions in `ntupledicts.ml.plot` as of now are generalizat
 
 ## #TODO: Potential improvements
 
+If `ntupledicts` develops a usership, I'd be happy to add this functionality; I just haven't found it useful for my own work.
+
 ### General
 
 - Greater cut sophistication: selectors that can operate on more than one track property at a time
-- Saving models and datasets for future use
+- Saving models and datasets for future use (I never needed to do this as I usually ran stuff in a Jupyter Notebook)
+- Multi-class learning - currently, most functions only have support for binary classification (genuine == 1 vs. genuine == 0 being the canonical example). However, models can be trained to classify other discrete variables, such as pdgid. Right now, you couldn't use `ntupledicts` to make a neural network that picks electrons or muons out of a slurry of particles.
 
 ### ML
 
@@ -252,4 +293,6 @@ All of the plotting functions in `ntupledicts.ml.plot` as of now are generalizat
 - Support for more than one track property to contribute to a label, if desired
   - "Composite labels"?
 - Obviously, support for as many models as possible
+- [Hyperparameter search optimization](https://en.wikipedia.org/wiki/Hyperparameter_optimization): check it out!
+
 
