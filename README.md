@@ -15,16 +15,14 @@ All plots in the `ntupledicts.ml.plot` module are based off of ones that she dev
 
 ## What you'll need
 
-I'll turn this into a package to make this easier soon, but before
-that, here are the dependencies so far:
+I'll turn this into a package to make this easier soon, but before that, here are the non-standard-library dependencies:
 
 - `tensorflow 2.0.0` or above for machine learning
 - `sklearn` for more machine learning
-- `uproot` to read in the ROOT ntuples. You won't need this to run ntupledicts directly,
-but is is required in the workflow to produce the right kind of input for ntupledicts.
+- `uproot` to read in the ROOT ntuples.
+You won't need this to run ntupledicts directly, but is is required in the workflow to produce the right kind of input.
 
-Note that this package does not depend upon any particular version of CMSSW
-or have any requirements for track properties in the imported ntuples.
+Note that this package does not depend upon any particular version of CMSSW or have any requirements for track properties in the imported ntuples.
 
 
 ## Working with ntuples as Python dictionaries
@@ -50,13 +48,14 @@ track_prop_dict = ntuple_dict[track_type]
 val_list = track_prop_dict[track_property]
 ```
 
-***Note***: I choose to define **track property dicts** such that even **value lists** that are not
-drawn directly from the input ntuples are valid. For example, if you wanted a machine
-learning model's prediction to be a track property **value list**, that would be perfectly
-valid, *as long as the predictions are indexed by the same tracks that made the track
-property dict in the first place*.
+***Note***: I choose to define **track property dicts** such that even **value lists** that are not drawn from the input ntuples are valid.
+Now you can add custom track properties (see "analyzing the contents of an ntuple dict) and ML model predictions (see the section on machine learning) without worrying about whether it's considered hacky to do so.
 
 ### Creating an ntuple dictionary
+
+```python
+import ntupledicts.load as ndload
+```
 
 Here's a sample of code where I make an **ntuple dict** from root ntuples:
 
@@ -74,13 +73,13 @@ properties_by_track_type = {"trk": ["pt", "eta", "genuine"],
                             "tp": ["pt", "eta", "nstub", "dxy", "d0", "eventid", "nmatch"]}
 
 # Create ntuple properties dict from event set
-ntuple_dict = ndops.ntuples_to_ntuple_dict(event_sets, properties_by_track_type)
+ntuple_dict = ndload.root_files_to_ntuple_dict(event_sets, properties_by_track_type)
 ```
 
-It really is as easy as this: choose whichever samples you wish, choose the properties you want from them, and shove this into a function.
+It is as easy as this: choose whichever samples you wish, choose the properties you want from them, and shove this into a function.
 
-Note that this function, `ntuples_to_ntuple_dict`, automatically cuts tracks with invalid values like `inf` or `nan` upon creation.
-As this takes time, this can be disabled with a keyword argument, as those values are unusual.
+Note that this function, `root_files_to_ntuple_dict`, by default cuts tracks with invalid values like `inf` or `nan` upon creation.
+As this takes time, this can be disabled with a keyword argument, as those values do not appear frequently.
 However, it is the default, as even one `inf` or `nan` can ruin a machine learning train session.
 
 ### Applying cuts to an ntuple dictionary
@@ -119,14 +118,14 @@ One convenient thing about `sel()` here is that it can select a particular value
 This is shown above in the case of eventid.
 
 To logical `AND` with **selector**s, simply apply two **selector**s.
-To logical `OR`, pass your desired **selector**s to logical `OR` into `sel` as a list, like so:
+To logical `OR`, pass your desired **selector**s to logical `OR` into `sel` as a list.
 
 ```python
 sel([sel(0), sel(1, 4)])
 ```
 
 This will select zero and any value between one and four, inclusive.
-To "reverse" any **selector**, simply add the keyword arg `invert=True` into a composed **selector**.
+To "reverse" any **selector**, that is, make it select everything but what is specified, add the keyword arg `invert=True` into a composed **selector**.
 For example, `sel([sel(1, 3)], invert=True)` will select all values outside of the inclusive range one through three.
 
 #### Other functions of note in ntupledicts.operations
@@ -167,7 +166,7 @@ track_prop_dict["missingPS"] = create_stub_info_list(track_prop_dict,
 
 `create_stub_info_list()` is a function that uses the eta and hitpattern associated with each track in a track properties dict (assuming those track properties have been included) to generate stub information.
 The eta is used to find which layers are expected to be hit and whether each is a PS or 2S module.
-The hitpattern is then used to find which of those expected layers were actually hit.
+The hitpattern is then used to find which of those expected layers were hit.
 
 Using both of these, `basic_process_stub_info()` is able to take in the lambda expressions `missing_2S_layer` and `missing_PS_layer` (as well as any that can be defined using that form) to find that information for each track, creating a list that can simply be added to the `track_prop_dict`.
 
@@ -179,6 +178,7 @@ The main plotting library includes some functions for making histograms of track
 
 All functions in `ntupledicts.plot` (and in `ntupledicts.ml.plot`) accept and return an axes object for ease of use in overlaying.
 
+
 ## For Machine Learning
 
 Contained in `ntupledicts.ml` is everything you'll need to make a machine learning model, configure it, train it on data, test its performance, and plot the result of those tests.
@@ -189,8 +189,7 @@ Contained in `ntupledicts.ml` is everything you'll need to make a machine learni
 from ntupledicts.ml.data import TrackPropertiesDataset
 ```
 
-All data is stored in a `TrackPropertiesDataset`, which is essentially a track
-properties dict with some ML-focus functionality.
+All data is stored in a `TrackPropertiesDataset`, which is essentially a track properties dict with its own class and some ML-focused functionality.
 It separates the data contained in an input track properties dict into data and labels, in accordance with standard machine learning practice.
 
 ```python
@@ -207,13 +206,16 @@ tpds.get_label_property()  # "genuine"
 
 The label property and the active data property can also be set in an already instantiated dataset, though this is less common.
 
-To get the active data and labels, simply run:
+To get the active data and labels, run:
 
 ```python
 tpds.get_data()  # Tensorflow array of data
 tpds.get_labels()  # Tensorflow array of labels
 tpds.get_data(["pt", "nstub"])  # Tensorflow array of only pt and nstub data
 ```
+
+By default, `get_data()` normalizes the data for each property, for better use in model training.
+This can be disabled with the keyword argument `normalize=False`.
 
 
 ### Models
@@ -224,7 +226,7 @@ from ntupledicts.ml.models import make_gbdt
 ```
 
 There are some convenient wrapper functions for common networks.
-For example, for a tensorflow neural network, rather than building it yourself, you can simply specify hidden layers:
+For example, for a tensorflow neural network, rather than building it yourself, you can specify hidden layers:
 
 ```python
 NN = make_neuralnet(train_ds, validation_data=eval_ds, hidden_layers=[14, 6], epochs=10)
@@ -232,6 +234,7 @@ GBDT = ndmlmodels.make_gbdt(train_ds)
 ```
 
 However, you are by no means restricted to using these functions to create your models.
+These may lack the configurability required for your research.
 
 
 ### Prediction
@@ -240,20 +243,21 @@ However, you are by no means restricted to using these functions to create your 
 import ntupledicts.ml.predict as ndmlpred
 ```
 
-Just like there are wrappers to create models, there are also wrappers to run them on data. These will create lists of probabilities of label predictions.
+Just like there are wrappers to create models, there are also wrappers to run them on data.
+These will create lists of probabilities of label predictions.
 
 ```python
 pred_labels = ndmlpred.predict_labels(GBDT, test_ds.get_data())
 ```
 
-`TrackPropertiesDataset`s are capable of storing predictions, previous ones of which can be accessed by label like so:
+`TrackPropertiesDataset`s are capable of storing predictions, previous ones of which can be accessed by label.
 
 ```python
 test_ds.add_prediction("NN", ndmlpred.predict_labels(NN, test_ds.get_data()))
 test_ds.get_prediction("NN")  # Tensorflow array of labels predicted by model NN
 ```
 
-There is also support for having a selector (or, in common speak, a set of cuts) predict labels. This is done like so:
+There is also support for having a selector (or, in common speak, a set of cuts) predict labels.
 
 ```python
 some_track_property = "pt"  # a track property to cut on
@@ -270,29 +274,31 @@ These functions are used often in the plots below.
 
 `ntupledicts.ml.plot` consists of a function that plots the ROC curve of a model and a couple functions that split a `TrackPropertiesDataset` into bins and then compute `tpr`/`fpr` for each bin.
 This ascertains the performance of a model on different types of tracks.
-Say, for example, the model did really well for high pt and really bad for low pt.
+Say, for example, the model did wonderfully for high pt and terribly for low pt.
 You might see high `tpr` and low `fpr` for high pt and the reverse
 for low pt.
 
 All of the plotting functions in `ntupledicts.ml.plot` as of now are generalizations of ones developed by [Claire Savard](https://github.com/cgsavard), a grad student in high energy physics at CU Boulder. Props to her!
 
 
-## #TODO: Potential improvements
+## Potential Improvements / "How can I contribute?"
 
 If `ntupledicts` develops a usership, I'd be happy to add this functionality; I just haven't found it useful for my own work.
+But even better than me adding this functionality would be someone else doing it and submitting a pull request!
 
 ### General
 
-- Greater cut sophistication: selectors that can operate on more than one track property at a time
-- Saving models and datasets for future use (I never needed to do this as I usually ran stuff in a Jupyter Notebook)
-- Multi-class learning - currently, most functions only have support for binary classification (genuine == 1 vs. genuine == 0 being the canonical example). However, models can be trained to classify other discrete variables, such as pdgid. Right now, you couldn't use `ntupledicts` to make a neural network that picks electrons or muons out of a slurry of particles.
+- Greater cut sophistication: selectors that can operate on more than one track property at a time.
+- Saving models and datasets for future use. I never needed to do this, as I usually ran stuff in a Jupyter Notebook.
+- There just aren't that many types of plots. I only made the plots that were relevant to my work; more might be necessary for others (and this is a super easy topic to submit a pull request for).
+- Boring but important: `root_ntuple_to_ntuple_dict()`, the "entry point" to `ntupledicts`, is a bit hacky and hard-coded with the way it extracts ntuples from the files.
+It's worked for me so far, but you're welcome to check it out for yourself.
 
 ### ML
 
-- More model configurability from the model creation wrapper functions — it's hard to know what's too much configurability and what isn't enough
-- Support for more than one track property to contribute to a label, if desired
-  - "Composite labels"?
-- Obviously, support for as many models as possible
-- [Hyperparameter search optimization](https://en.wikipedia.org/wiki/Hyperparameter_optimization): check it out!
-
+- More model configurability from the model creation wrapper functions — it's hard to know what's too much configurability and what isn't enough.
+- And, obviously, support for as many models as possible. I only needed NN's and GBDT's, but others sure do exist.
+- [Hyperparameter optimization](https://en.wikipedia.org/wiki/Hyperparameter_optimization): check it out!
+- Multi-class learning - currently, most functions only have support for binary classification (genuine == 1 vs. genuine == 0 being the canonical example).
+However, models can be trained to classify other discrete variables, such as pdgid. Right now, you can't use `ntupledicts` to make a model that picks electrons or muons out of a slurry of particles.
 
