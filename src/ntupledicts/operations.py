@@ -221,8 +221,9 @@ def shuffle_track_prop_dict(track_prop_dict, shuffled_indices=None, seed=None):
     if shuffled_indices is None:
         shuffled_indices = generate_shuffled_indices(tpd_length)
     if len(shuffled_indices) != tpd_length:
-        raise ValueError("shuffled_indices length differs from"
-                "track_prop_dict length")
+        raise ValueError("shuffled_indices arg length ({}) differs from "
+                "track_prop_dict length ({})."
+                .format(len(shuffled_indices), tpd_length))
 
     return dict(map(lambda property_name, val_list:
         (property_name, shuffle_val_list(val_list, shuffled_indices)),
@@ -283,7 +284,7 @@ def reduce_track_prop_dict(track_prop_dict, track_limit, min_index=0,
     """
 
     if shuffle_tracks:
-        track_prop_dict = shuffle_track_prop_dict(track_prop_dict, seed)
+        track_prop_dict = shuffle_track_prop_dict(track_prop_dict, seed=seed)
 
     return dict(map(lambda track_prop, track_prop_vals:
         (track_prop, track_prop_vals[min_index:min(track_limit + min_index,

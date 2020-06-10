@@ -3,6 +3,7 @@
 
 from uproot import open as uproot_open
 from . import operations as ndops
+from .operations import select as sel
 
 
 def root_files_to_ntuple_dict(root_ntuple_paths, properties_by_track_type,
@@ -109,8 +110,8 @@ def uproot_ntuple_to_ntuple_dict(uproot_ntuple, properties_by_track_type,
         return ntuple_dict
     else:
         invalid_vals = [float("nan"), float("inf")]
-        invalid_track_sel = select(
-                [select(invalid_val) for invalid_val in invalid_vals],
+        invalid_track_sel = sel(
+                [sel(invalid_val) for invalid_val in invalid_vals],
                 invert=True)
 
         # Select for the above selector in every field of an ntuple dict,

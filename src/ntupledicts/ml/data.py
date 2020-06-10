@@ -37,7 +37,7 @@ class TrackPropertiesDataset:
     """
 
     def __init__(self, track_prop_dict, label_property,
-                 active_data_properties=None, prediction_dict={}):
+                 active_data_properties=[], prediction_dict={}):
         """Initializes this TrackPropertiesDataset with its track
         properties dict, its access settings, and predictions, if any.
 

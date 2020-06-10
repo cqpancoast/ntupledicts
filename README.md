@@ -58,18 +58,13 @@ Here's a sample of code where I make an **ntuple dict** from root ntuples:
 ```python
 input_files = ["TTbar_PU200_D49.root", "QCD_PU200_D49.root"]
 
-# Open ntuples
-event_sets = []
-for input_file in input_files:
-    event_sets.append(next(iter(uproot_open(input_file).values()))["eventTree"])
-
 # Specify desired properties
 properties_by_track_type = {"trk": ["pt", "eta", "genuine"],
                             "matchtrk": ["pt", "eta", "nstub", "chi2rphi", "chi2rz"],
                             "tp": ["pt", "eta", "nstub", "dxy", "d0", "eventid", "nmatch"]}
 
 # Create ntuple properties dict from event set
-ntuple_dict = ndload.root_files_to_ntuple_dict(event_sets, properties_by_track_type)
+ntuple_dict = ndload.root_files_to_ntuple_dict(input_files, properties_by_track_type)
 ```
 
 It is as easy as this: choose whichever samples you wish, choose the properties you want from them, and shove this into a function.
@@ -280,18 +275,20 @@ All of the plotting functions in `ntupledicts.ml.plot` as of now are generalizat
 ## Potential Improvements / "How can I contribute?"
 
 If `ntupledicts` develops a usership, I'd be happy to add this functionality; I just haven't found it useful for my own work.
-But even better than me adding this functionality would be someone else doing it and submitting a pull request!
+But you know what's even better than me adding functionality?
+Someone else doing it, and submitting a pull request!
 
 ### General
 
+- There are many places in which 2-tuples of a value and some error are returned. There should be an option in all functions like this to return only the value.
 - Greater cut sophistication: selectors that can operate on more than one track property at a time.
-- Saving models and datasets for future use. I never needed to do this, as I usually ran stuff in a Jupyter Notebook.
 - There just aren't that many types of plots. I only made the plots that were relevant to my work; more might be necessary for others (and this is a super easy topic to submit a pull request for).
-- Boring but important: `root_ntuple_to_ntuple_dict()`, the "entry point" to `ntupledicts`, is a bit hacky and hard-coded with the way it extracts ntuples from the files.
-It's worked for me so far, but you're welcome to check it out for yourself.
+- Boring but important: `root_files_to_ntuple_dict()`, the "entry point" to `ntupledicts`, is a bit hacky and hard-coded with the way it extracts ntuples from the files. It's worked for me so far, but you're welcome to check it out for yourself.
 
 ### ML
 
+- Making tensorflow deterministic. It's harder than you'd think.
+- Saving models and datasets for future use. I never needed to do this, as I usually ran stuff in a Jupyter Notebook.
 - More model configurability from the model creation wrapper functions — it's hard to know what's too much configurability and what isn't enough.
 - And, obviously, support for as many models as possible. I only needed NN's and GBDT's, but others sure do exist.
 - [Hyperparameter optimization](https://en.wikipedia.org/wiki/Hyperparameter_optimization): check it out!
