@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, roc_auc_score
 from .. import plot as ndplot
 from . import predict as ndmlpred
-from scipy.stats import binom
 
 
 def plot_pred_comparison_by_track_property(dataset, pred_name,

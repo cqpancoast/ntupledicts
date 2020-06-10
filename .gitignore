@@ -1,5 +1,7 @@
 *.pyc
-main.py
 .idea
-eventsets/
 *.swp
+setup.py
+dist
+build
+*egg-info*

@@ -13,16 +13,12 @@ I'd like to thank [Claire Savard](https://github.com/cgsavard) for her previous 
 All plots in the `ntupledicts.ml.plot` module are based off of ones that she developed.
 
 
-## What you'll need
+## Install and Run
 
-I'll turn this into a package to make this easier soon, but before that, here are the non-standard-library dependencies:
-
-- `tensorflow 2.0.0` or above for machine learning
-- `sklearn` for more machine learning
-- `uproot` to read in the ROOT ntuples.
-You won't need this to run ntupledicts directly, but is is required in the workflow to produce the right kind of input.
+It's on pip — `pip install ntupledicts`.
 
 Note that this package does not depend upon any particular version of CMSSW or have any requirements for track properties in the imported ntuples.
+I've been thinking about separating this package into CMS/track-trigger functionality and more general machine learning functionality in order to more easily apply it to my personal use.
 
 
 ## Working with ntuples as Python dictionaries
