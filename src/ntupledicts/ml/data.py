@@ -93,7 +93,7 @@ class TrackPropertiesDataset:
 
         return TrackPropertiesDataset(
             ndops.add_track_prop_dicts(
-                [self._track_prop_dict, other.track_prop_dict]),
+                [self._track_prop_dict, other._track_prop_dict]),
             self._label_property,
             other.active_data_properties,
             ndops.add_track_prop_dicts(

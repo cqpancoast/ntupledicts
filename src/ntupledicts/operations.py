@@ -7,6 +7,8 @@ from copy import deepcopy
 from functools import reduce
 from math import inf
 from numpy import cumsum
+from numpy import array
+from numpy import delete
 from warnings import warn
 
 
@@ -489,13 +491,13 @@ def cut_track_prop_dict_by_indices(track_prop_dict, indices_to_cut):
         on its value lists removed.
     """
 
-    # Copy, then delete all tracks at indices (backwards)
-    cut_track_prop_dict = deepcopy(track_prop_dict)
-    for track_to_cut in reversed(sorted(indices_to_cut)):
-        for track_property in cut_track_prop_dict.keys():
-            del cut_track_prop_dict[track_property][track_to_cut]
+    track_properties = track_prop_dict.keys()
+    post_cuts_track_prop_dict = {}
+    for track_property in track_properties:
+        post_cuts_track_prop_dict[track_property] = list(delete(
+                array(track_prop_dict[track_property]), indices_to_cut))
 
-    return cut_track_prop_dict
+    return post_cuts_track_prop_dict
 
 
 def normalize_ntuple_dict(ntuple_dict, normalize_dict=None):
