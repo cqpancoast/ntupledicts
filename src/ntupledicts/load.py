@@ -110,19 +110,14 @@ def uproot_ntuple_to_ntuple_dict(uproot_ntuple, properties_by_track_type,
         return ntuple_dict
     else:
         invalid_vals = [float("nan"), float("inf")]
-        invalid_track_sel = sel(
-                [sel(invalid_val) for invalid_val in invalid_vals],
-                invert=True)
+        invalid_track_sel = lambda val: val not in invalid_vals
 
         # Select for the above selector in every field of an ntuple dict,
         # but only if the list contains those values in the first place
         invalid_sel_dict = dict(map(lambda track_type:
             (track_type, dict(map(lambda track_property:
                 (track_property, invalid_track_sel),
-                list(filter(lambda track_property:
-                    any(invalid_val in ntuple_dict[track_type][track_property]\
-                        for invalid_val in invalid_vals),
-                    ntuple_dict[track_type].keys()))))),
+                ntuple_dict[track_type].keys()))),
             ntuple_dict.keys()))
 
         return ndops.cut_ntuple_dict(ntuple_dict, invalid_sel_dict)

@@ -1,15 +1,15 @@
 """Basic operations on ntuple dicts and track property dicts."""
 
-
 from random import shuffle
 from random import seed as set_seed
 from copy import deepcopy
 from functools import reduce
 from math import inf
+from warnings import warn
 from numpy import cumsum
 from numpy import array
 from numpy import delete
-from warnings import warn
+from numpy import where
 
 
 def add_ntuple_dicts(ntuple_dicts):
@@ -459,18 +459,12 @@ def select_indices(track_prop_dict, tpd_selector, invert=True):
                     .format(track_property), UserWarning)
             tpd_selector.pop(track_property)
 
-    def index_meets_selection(track_index):
-        """Determine if the track at this index is selected by the
-        selector dict."""
-
-        return all(list(map(lambda track_property, property_selector:
-            property_selector(track_prop_dict[track_property][track_index]),
-            tpd_selector.keys(), tpd_selector.values())))
-
-    track_indices = range(track_prop_dict_length(track_prop_dict))
-    return list(filter(lambda track_index:
-            invert != index_meets_selection(track_index),
-            track_indices))
+    tpd_length = track_prop_dict_length(track_prop_dict)
+    return list(set(sum(map(lambda track_property, selector:
+                            list(where([invert != selector(val) for val in\
+                                track_prop_dict[track_property]])[0]),
+                            tpd_selector.keys(), tpd_selector.values()),
+                        [])))
 
 
 def cut_track_prop_dict_by_indices(track_prop_dict, indices_to_cut):
