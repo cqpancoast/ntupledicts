@@ -1,3 +1,5 @@
+"""PREDICT: make and measure predictions on discriminator behavior."""
+
 from .. import operations as ndops
 from .. import analyze as ndanl
 from ..operations import select as sel
@@ -161,6 +163,10 @@ def predict_labels_cuts(tpd_selector, dataset):
 
     cut_indices = ndops.select_indices(track_prop_dict, tpd_selector)
 
-    return list(map(lambda index: 0 if index in cut_indices else 1,
-       range(ndops.track_prop_dict_length(track_prop_dict))))
+    pred_labels = [1 for _ in range(
+        ndops.track_prop_dict_length(track_prop_dict))]
+    for cut_index in cut_indices:
+        pred_labels[cut_index] = 0
+
+    return pred_labels
 

@@ -68,11 +68,9 @@ def test(track_prop_dict):
     """Use this function when testing samples or functionality rather
     than actually running stuff."""
 
-    print("Finished with infinities, starting with genuines")
-
-    # TODO find out what's taking cuts so long
-    nd_not_gens = ndops.cut_track_prop_dict(track_prop_dict, {"genuine": sel(0)})
-
+    # TODO determine which method is faster for making cut predictions (see ndmlpred)
+    tpds = ndmldata.TrackPropertiesDataset(track_prop_dict, "genuine")
+    ndmlpred.predict_labels_cuts({"chi2": sel(0, 20)}, tpds)
 
 
 main()

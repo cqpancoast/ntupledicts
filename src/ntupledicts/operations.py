@@ -44,7 +44,7 @@ def add_track_prop_dicts(track_prop_dicts):
             the same properties.
 
     Returns:
-        An track properties dictionary with the lists of values of each
+        A track properties dictionary with the lists of values of each
         track properties dict in the input list concatenated.
 
     Raises:
@@ -74,6 +74,35 @@ def add_track_prop_dicts(track_prop_dicts):
             props_in_common))
 
     return reduce(add_two_track_prop_dicts, track_prop_dicts)
+
+
+def mix_track_prop_dicts(track_prop_dicts, seed=None):
+    """Mixes together multiple track properties dicts with the same
+    properties. 'Mixing', in this context, means to cut all other dicts
+    in the list down to the size of the smallest, and then shuffle them
+    all together.
+
+    Args:
+        track properties_dicts: a list of track properties dicts with
+            the same properties.
+        seed: a seed for the random shuffling for reproducability.
+
+    Returns:
+        A track properties dictionary containing an equal amount of
+        tracks from each track properties dictionary in the input list.
+
+    Raises:
+        ValueError: if there is no property shared by all of the track
+            property dicts.
+    """
+
+    min_tpd_size = min(map(track_prop_dict_length, track_prop_dicts))
+
+    return shuffle_track_prop_dicts(add_track_prop_dicts(map(
+            lambda tpd:
+            reduce_track_prop_dict(tpd, min_tpd_size, shuffle_tracks=False),
+            track_prop_dicts)),
+        seed=seed)
 
 
 def ntuple_dict_length(ntuple_dict):
