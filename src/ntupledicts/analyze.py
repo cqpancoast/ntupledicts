@@ -117,9 +117,7 @@ def take_measure_by_bin(track_prop_dict, bin_property, measure, bins=30):
         measure(ndops.cut_track_prop_dict(track_prop_dict,
             # Select values in range lower_bin to upper_bin,
             # but exclude values equal to upper_bin
-            {bin_property: lambda val:
-                sel(lower_bin, upper_bin)(val) and\
-                        sel([sel(upper_bin)], invert=True)})),
+            {bin_property: lambda val: lower_bin <= val < upper_bin})),
         bins[:-1], bins[1:]))
 
     bin_heights = list(map(lambda l: l[0], bin_heights_and_errs))

@@ -98,9 +98,8 @@ def mix_track_prop_dicts(track_prop_dicts, seed=None):
 
     min_tpd_size = min(map(track_prop_dict_length, track_prop_dicts))
 
-    return shuffle_track_prop_dicts(add_track_prop_dicts(map(
-            lambda tpd:
-            reduce_track_prop_dict(tpd, min_tpd_size, shuffle_tracks=False),
+    return shuffle_track_prop_dict(add_track_prop_dicts(map(
+            lambda tpd: reduce_track_prop_dict(tpd, min_tpd_size, seed),
             track_prop_dicts)),
         seed=seed)
 
