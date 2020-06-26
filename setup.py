@@ -6,7 +6,7 @@ with open("README.md", "r") as f:
 
 setup(
     name="ntupledicts",
-    version="0.9.2",
+    version="0.9.3",
     author="Casey Pancoast",
     author_email="cqpancoast@gmail.com",
     description="Treating CMS TrackTrigger ROOT Ntuples as Python dictionaries with ML studies in mind.",
